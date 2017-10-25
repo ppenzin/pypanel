@@ -1,5 +1,5 @@
 /*
-PyPanel v2.3 - Lightweight panel/taskbar for X11 window managers
+PyPanel v2.4 - Lightweight panel/taskbar for X11 window managers
 Copyright (c) 2003-2005 Jon Gelo (ziljian@users.sourceforge.net)
 
 This file is part of PyPanel.
@@ -145,7 +145,7 @@ static PyObject * _ppicon(PyObject *self, PyObject *args) {
 /*--------------------------------------------------------*/
     Imlib_Image icon;
     Pixmap win_icon, win_mask;
-    Window panel;
+    Window panel, root;
     XStandardColormap *scm;
     char *data, *path; 
     int y, w, h, i_w, i_h, s1, s2;
@@ -154,7 +154,7 @@ static PyObject * _ppicon(PyObject *self, PyObject *args) {
     if (!PyArg_ParseTuple(args, "lllfiiiiis#s#", &panel, &win_icon, &win_mask,
                           &x, &y, &w, &h, &i_w, &i_h, &data, &s1, &path, &s2))
         return NULL;
-    
+        
     if (s2 > 0)
         /* custom app icon */
         icon = imlib_load_image(path);
@@ -163,11 +163,15 @@ static PyObject * _ppicon(PyObject *self, PyObject *args) {
         icon = imlib_create_image_using_data(w, h, (DATA32*)data);
     else if (win_icon) {
         /* wmhints icon */
-        scm = XAllocStandardColormap();
-        imlib_context_set_drawable(win_icon);
-        imlib_context_set_colormap(scm->colormap);
-        icon = imlib_create_image_from_drawable(win_mask, 0, 0, w, h, 1);
-        XFree(scm);
+        if (!XGetGeometry(dsp, win_icon, &root, &s1, &s1, &s1, &s1, &s1, &s1))
+            icon = NULL;
+        else {
+            scm = XAllocStandardColormap();
+            imlib_context_set_drawable(win_icon);
+            imlib_context_set_colormap(scm->colormap);
+            icon = imlib_create_image_from_drawable(win_mask, 0, 0, w, h, 1);
+            XFree(scm);
+        }
     }
     else
         /* no icon defined */

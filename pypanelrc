@@ -1,12 +1,12 @@
 #------------------------------------------------------------------------------
 #
-#                         PyPanel v2.3 Configuration
+#                         PyPanel v2.4 Configuration
 #
 # This configuration file is a Python script that will be executed when
 # PyPanel is started.  In order for PyPanel to start properly, make sure that
 # this file contains proper Python formatting and no syntax errors.
 #------------------------------------------------------------------------------
-VERSION         = 2.3           # Config file version
+VERSION         = 2.4           # Config file version
 
 #------------------------------------------------------------------------------
 # Colors: Format is hex triplet - 0xrrggbb
@@ -19,6 +19,14 @@ MINIMIZED_COLOR = "0x808080"    # Minimized task name color
 DESKTOP_COLOR   = "0x000000"    # Desktop name color
 CLOCK_COLOR     = "0x000000"    # Clock text color
 LINE_COLOR      = "0x606060"    # Vertical line color
+
+# Text Shadow Colors
+TASK_SHADOW_COLOR      = "0xffffff"
+FOCUSED_SHADOW_COLOR   = "0xffffff"
+SHADED_SHADOW_COLOR    = "0xffffff"
+MINIMIZED_SHADOW_COLOR = "0xffffff" 
+DESKTOP_SHADOW_COLOR   = "0xffffff"
+CLOCK_SHADOW_COLOR     = "0xffffff"
 
 #------------------------------------------------------------------------------
 # Panel Spacing and Location Options: Measured in pixels
@@ -123,6 +131,7 @@ SHADE           = 50
 ABOVE           = 1             # Panel is always above other apps
 APPICONS        = 1             # Show application icons
 AUTOHIDE        = 0             # Autohide uses the CLOCK_DELAY timer above
+SHADOWS         = 0             # Show text shadows
 SHOWLINES       = 0             # Show object seperation lines
 SHOWBORDER      = 0             # Show a border around the panel
 
@@ -144,7 +153,7 @@ DESKTOP_NAMES   = []
 # assigning it a section number or disabled by assigning it 0:
 #------------------------------------------------------------------------------
 DESKTOP         = 1             # Desktop name section
-TASKS           = 2             # Task names section (cannot be disabled!) 
+TASKS           = 2             # Task names section 
 TRAY            = 3             # System tray section
 CLOCK           = 4             # Clock section
 LAUNCHER        = 0             # Application launcher section

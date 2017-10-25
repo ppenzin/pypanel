@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
-PyPanel v2.3 Copyright (c) 2003-2005 Jon Gelo (ziljian@users.sourceforge.net)
+PyPanel v2.4 Copyright (c) 2003-2005 Jon Gelo (ziljian@users.sourceforge.net)
 Distributed under the GNU General Public License v2, see COPYING for details.
 -------------------------------------------------------------------------------
 PyPanel is a lightweight panel/taskbar written in Python and C for X11 window
@@ -63,12 +63,14 @@ PyPanel installs the following files -
    the PyPanel script itself.
 
 -------------------------------------------------------------------------------
-                                 Contributions
+                             Contributions & Thanks
 -------------------------------------------------------------------------------
 1. My sincerest thanks to the many PyPanel users who have shared their ideas,
    suggestions, comments, code snippets and overall support for this project.
 2. The default app icon included with this distribution is from the Amaranth
    icon set by Michael Doches.  Available from http://www.kde-look.org
+3. Original shadowed text and no-task display patches were contributed by
+   Johannes Winkelmann.  
       
 -------------------------------------------------------------------------------   
                                     Contact
@@ -80,6 +82,21 @@ http://pypanel.sourceforge.net
 -------------------------------------------------------------------------------
                                     History
 -------------------------------------------------------------------------------
+050626   New features:
+v2.4        Shadowed text
+            Ability to disable the task display
+         Bug fixes:
+            Fix for wmhint icons with icon mask > maxint (eg AleVT)
+            Fix when reading the class name of apps that don't set class name
+            Race condition for destroyed task - drawing its wmhints icon
+         New config options:
+            SHADOWS                : Enable text shadows
+            TASK_SHADOW_COLOR      : Normal task shadow color
+            FOCUSED_SHADOW_COLOR   : Focused task shadow color
+            SHADED_SHADOW_COLOR    : Shaded task shadow color
+            MINIMIZED_SHADOW_COLOR : Minimized task shadow color
+            DESKTOP_SHADOW_COLOR   : Desktop name shadow color
+            CLOCK_SHADOW_COLOR     : Clock name shadow color
 050510   New features:
 v2.3        Improved support for Fluxbox, Blackbox, XFWM4 and Enlightenment
             Ability to customize individual app icons
@@ -89,7 +106,7 @@ v2.3        Improved support for Fluxbox, Blackbox, XFWM4 and Enlightenment
          Bug fixes:
             Clock updates 
             Several system tray and performance improvements
-         New Config Options:
+         New config options:
             ABOVE         : Panel is above or below other apps
             APPL_I_WIDTH  : Application launcher icon width
             APPL_I_HEIGHT : Application launcher icon height 

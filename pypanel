@@ -1,6 +1,6 @@
 #!/usr/bin/python -OO
 """
-PyPanel v2.3 - Lightweight panel/taskbar for X11 window managers
+PyPanel v2.4 - Lightweight panel/taskbar for X11 window managers
 Copyright (c) 2003-2005 Jon Gelo (ziljian@users.sourceforge.net)
 
 This program is free software; you can redistribute it and/or
@@ -68,13 +68,11 @@ class PyPanel(object):
         # Init the panel sections
         if DESKTOP:
             self.panel["sections"].append(DESKTOP)
-            self.panel[DESKTOP] = Obj(id="desktop", names=[], first=0, last=0, color=self.getColor(DESKTOP_COLOR))
+            self.panel[DESKTOP] = Obj(id="desktop", names=[], first=0, last=0)
         if CLOCK:
             self.panel["sections"].append(CLOCK)
-            self.panel[CLOCK] = Obj(id="clock", first=0, last=0, color=self.getColor(CLOCK_COLOR))
-        if TASKS:
-            self.panel["sections"].append(TASKS)
-            self.panel[TASKS] = Obj(id="tasks", tasks={}, order=[], first=0, last=0)
+            self.panel[CLOCK] = Obj(id="clock", name="", first=0, last=0, x1=0, x2=0,
+                color=self.getColor(CLOCK_COLOR), shadow=self.getColor(CLOCK_SHADOW_COLOR))
         if TRAY:
             self.panel["sections"].append(TRAY)
             self.panel[TRAY] = Obj(id="tray", tasks={}, order=[], first=0, last=0, window=self.window)
@@ -83,7 +81,9 @@ class PyPanel(object):
             self.panel["sections"].append(LAUNCHER)
             self.panel[LAUNCHER] = Obj(id="launcher", tasks={}, order=[], first=0, last=0)
             self.createLauncher()
-            
+        
+        self.panel["sections"].append(TASKS)
+        self.panel[TASKS] = Obj(id="tasks", tasks={}, order=[], first=0, last=0)      
         self.panel["sections"].sort()
         self.panel[self.panel["sections"][0]].first = 1
         self.panel[self.panel["sections"][-1]].last = 1
@@ -132,6 +132,14 @@ class PyPanel(object):
         self.sendEvent(self.root, manager,[X.CurrentTime, selection,
             self.selowin.id], (X.StructureNotifyMask))
     
+    #---------------------------------
+    def drawText(self, obj, x, width):
+    #---------------------------------
+        """ Draw the given objects name at x """
+        if SHADOWS:
+            ppfont(self.window.id, obj.shadow, x+1, P_HEIGHT+2, width, obj.name) 
+        ppfont(self.window.id, obj.color, x, P_HEIGHT, width, obj.name)
+        
     #----------------------------------
     def setStruts(self, win, hidden=0):
     #----------------------------------
@@ -164,7 +172,7 @@ class PyPanel(object):
     #----------------------------
     def setProps(self, dsp, win):
     #----------------------------
-        """ Get necessary X atoms and set the panel properties """   
+        """ Set necessary X atoms and panel window properties """   
         self._ABOVE           = dsp.intern_atom("_NET_WM_STATE_ABOVE")
         self._BELOW           = dsp.intern_atom("_NET_WM_STATE_BELOW")
         self._BLACKBOX        = dsp.intern_atom("_BLACKBOX_ATTRIBUTES")  
@@ -206,9 +214,9 @@ class PyPanel(object):
     #-----------------------------------------
     def setState(self, task, panel, win=None):
     #-----------------------------------------
-        """ Set/Update a tasks state
-            return 0 - no panel update needed
-            return 1 - panel update needed
+        """ Set/Update a tasks state.  Returns -
+            0 - no panel update needed
+            1 - panel update needed
         """
         task.state   = []
                         
@@ -227,12 +235,16 @@ class PyPanel(object):
         # set color based on state
         if task.id == self.focus:
             task.color = self.getColor(FOCUSED_COLOR)
+            task.shadow = self.getColor(FOCUSED_SHADOW_COLOR)
         elif self._SHADED in task.state:
             task.color = self.getColor(SHADED_COLOR)
+            task.shadow = self.getColor(SHADED_SHADOW_COLOR)
         elif self._HIDDEN in task.state:     
             task.color = self.getColor(MINIMIZED_COLOR)
+            task.shadow = self.getColor(MINIMIZED_SHADOW_COLOR) 
         else:
             task.color = self.getColor(TASK_COLOR)
+            task.shadow = self.getColor(TASK_SHADOW_COLOR)
             
         if SHOWMINIMIZED:
             if (self._HIDDEN not in task.state and task.visible) or\
@@ -244,7 +256,7 @@ class PyPanel(object):
             if APPICONS:
                 x += I_WIDTH+P_SPACER
             self.clearPanel(x, 0, task.x2-x, P_HEIGHT)
-            ppfont(win.id, task.color, x, P_HEIGHT, task.x2-x-P_SPACER, task.name)
+            self.drawText(task, x, task.x2-x-P_SPACER)
         
         return 0
     
@@ -260,8 +272,8 @@ class PyPanel(object):
                 if APPICONS:
                     x += I_WIDTH+P_SPACER
                 self.clearPanel(x, 0, task.x2-x, P_HEIGHT)
-                ppfont(win.id, task.color, x, P_HEIGHT, task.x2-x-P_SPACER, task.name)
-    
+                self.drawText(task, x, task.x2-x-P_SPACER)
+                
     #-----------------------
     def setIcon(self, task):
     #-----------------------
@@ -269,7 +281,7 @@ class PyPanel(object):
         if not APPICONS:
             return
             
-        icon = Obj(path="", data="", width=0, height=0, pixmap=0, mask=0)
+        icon = Obj(path="", data="", width=0, height=0, pixmap=0L, mask=0L)
             
         for tc in task.tclass:
             if tc in ICON_LIST:
@@ -283,7 +295,7 @@ class PyPanel(object):
                 data        = data.value[:]
                 icon.width  = data[0]
                 icon.height = data[1]
-                icon.data   = data[2:data[0]*data[1]+2].tostring()
+                icon.data   = data[2:data[0]*data[1]+2].tostring()  
             else:
                 # wmhints icon
                 hints       = task.obj.get_wm_hints()
@@ -292,6 +304,11 @@ class PyPanel(object):
                 icon.mask   = hints.icon_mask.id
                 icon.width  = geom.width
                 icon.height = geom.height
+                
+                if icon.mask > sys.maxint:
+                    icon.mask = 0
+                if icon.pixmap > sys.maxint:
+                    raise
         except:
             # default icon
             icon.path = ICON_LIST["default"] or "%s/pypanel/ppicon.png" % sysconfig.get_python_lib()
@@ -314,16 +331,14 @@ class PyPanel(object):
             y = (P_HEIGHT-I_HEIGHT)/2
             w = I_WIDTH
             h = I_HEIGHT
-            name = task.tclass[0]
+            name = task.tclass
         
-        icon = task.icon    
+        icon = task.icon           
         rc   = ppicon(self.window.id, icon.pixmap, icon.mask, x, y, icon.width,
-                      icon.height, w, h, icon.data, icon.path)
-                                          
+                      icon.height, w, h, icon.data, icon.path)  
         if not rc:
             self.clearPanel(x, 0, w, P_HEIGHT)
-            sys.stderr.write("Failed to get icon for '%s' at -\n" % name)
-            sys.stderr.write(icon.path + "\n\n")
+            sys.stderr.write("Failed to get icon for '%s'\n%s\n\n" % (name, icon.path))
         
         return 1
     
@@ -333,7 +348,13 @@ class PyPanel(object):
         """ Populate the desktop obj with the names of each desktop """
         if not DESKTOP:
             return
-            
+        
+        if SHADOWS:
+            shadow = self.getColor(DESKTOP_SHADOW_COLOR)
+        else:
+            shadow = None
+        
+        color         = self.getColor(DESKTOP_COLOR)    
         desktop       = self.panel[DESKTOP]
         desktop.names = []
         desktop.total = self.root.get_full_property(self._DESKTOP_COUNT, 0).value[0]
@@ -354,7 +375,7 @@ class PyPanel(object):
                 names.append(str(x))  
                   
         for name in names:
-            obj = Obj(name=name, width=ppfontsize(name))
+            obj = Obj(name=name, width=ppfontsize(name), color=color, shadow=shadow)
             desktop.names.append(obj)        
             
     #-------------------------------
@@ -622,7 +643,7 @@ class PyPanel(object):
                         space -= t.width
                     except:
                         pass
-        if tasks:   
+        if TASKS and tasks: 
             for task in panel[TASKS].order:
                 t = tasks[task]
                 t.visible = 0
@@ -639,7 +660,7 @@ class PyPanel(object):
         self.clearPanel(0, 0, 0, 0)
             
         for section in panel["sections"]:
-            if panel[section].id == "tasks":
+            if panel[section].id == "tasks" and TASKS:
                 if not visible:
                     curr_x += space
                 else:
@@ -654,7 +675,7 @@ class PyPanel(object):
                         curr_x += P_SPACER
                         if self.getIcon(t, curr_x):
                             curr_x += I_WIDTH + P_SPACER
-                        ppfont(win.id, t.color, curr_x, P_HEIGHT, limit, t.name)                        
+                        self.drawText(t, curr_x, limit)
                         curr_x += limit + P_SPACER
                         t.x2 = curr_x
                         if v < len(visible) and SHOWLINES:
@@ -664,7 +685,7 @@ class PyPanel(object):
             elif panel[section].id == "clock":
                 clock.x1 = curr_x
                 curr_x += P_SPACER
-                ppfont(win.id, clock.color, curr_x, P_HEIGHT, 0, clock.name)
+                self.drawText(clock, curr_x, 0)
                 curr_x += clock.width + P_SPACER
                 clock.x2 = curr_x
                 if SHOWLINES and not clock.last:
@@ -673,7 +694,7 @@ class PyPanel(object):
                 desk = panel[section].names[cdt]
                 desktop.x1 = curr_x
                 curr_x += P_SPACER
-                ppfont(win.id, desktop.color, curr_x, P_HEIGHT, 0, desk.name)
+                self.drawText(desk, curr_x, 0)
                 curr_x += desk.width + P_SPACER
                 desktop.x2 = curr_x
                 if SHOWLINES and not desktop.last:
@@ -706,7 +727,7 @@ class PyPanel(object):
     #------------------------------------------------------
     def updateTasks(self, dsp, root, win, panel, update=0):
     #------------------------------------------------------
-        """ Check the tasklist for additions/deletions/changes """ 
+        """ Check the tasklist for additions/deletions/changes """     
         cdt   = self.getDesktop()
         tasks = root.get_full_property(self._CLIENT_LIST, Xatom.WINDOW).value
         count = 0
@@ -726,10 +747,9 @@ class PyPanel(object):
                 tclass = obj.get_full_property(Xatom.WM_CLASS, Xatom.STRING)
                       
                 if tclass is None:
-                    tclass = []
+                    tclass = ["",""]
                 else:
                     tclass = tclass.value.split("\0")[:2]
-                
                     for t in tclass:
                         if t in HIDE_LIST:
                             hide = 1
@@ -769,7 +789,8 @@ class PyPanel(object):
             clock = panel[CLOCK]
         if TRAY:
             tray = panel[TRAY]
-        tasks = panel[TASKS]
+            
+        tasks = panel[TASKS]  
         focus = dsp.get_input_focus().focus
         
         if hasattr(focus, "id"):
@@ -811,7 +832,7 @@ class PyPanel(object):
                                 self.clearPanel(x, 0, t.x2-x, P_HEIGHT)
                                 if self.getIcon(t, x):
                                     x += I_WIDTH+P_SPACER
-                                ppfont(win.id, t.color, x, P_HEIGHT, t.x2-x-P_SPACER, t.name)
+                                self.drawText(t, x, t.x2-x-P_SPACER)
                 elif e.type == X.ConfigureNotify and TRAY:
                     if e.window.id in tray.tasks:
                         task = tray.tasks[e.window.id]
@@ -862,7 +883,7 @@ class PyPanel(object):
                 if clock.name != now:
                     clock.name = now
                     self.clearPanel(clock.x1+1, 0, clock.x2-(clock.x1+1), P_HEIGHT)
-                    ppfont(win.id, clock.color, clock.x1+P_SPACER, P_HEIGHT, 0, now)
+                    self.drawText(clock, clock.x1+P_SPACER, 0)
                                               
 #----------------------------------------------------------------------------
 #                                  Main
@@ -871,18 +892,28 @@ from distutils import sysconfig
 from ppmodule import ppinit, ppshade, ppicon, ppfont, ppfontsize, ppclear
 from Xlib import X, display, error, Xatom, Xutil
 import Xlib.protocol.event
-import os, pwd, select, sys, time
+import locale, os, pwd, select, sys, time
 
-# New config options which may not exist in ~/.pypanelrc if upgrading
-HIDDEN_SIZE   = 2   # v2.2
-SHOWBORDER    = 0   # v2.2
-SHOWMINIMIZED = 0   # v2.2
-ABOVE         = 1   # v2.3
-LAUNCHER      = 0   # v2.3
-LAUNCH_LIST   = []  # v2.3
-APPL_I_HEIGHT = 24  # v2.3           
-APPL_I_WIDTH  = 24  # v2.3 
-ICON_LIST     = {"default":""}  # v2.3
+# New default config options which may not exist in ~/.pypanelrc if upgrading
+# v2.2
+HIDDEN_SIZE   = 2   
+SHOWBORDER    = 0 
+SHOWMINIMIZED = 0
+# v2.3
+ABOVE         = 1 
+LAUNCHER      = 0  
+LAUNCH_LIST   = [] 
+APPL_I_HEIGHT = 24         
+APPL_I_WIDTH  = 24  
+ICON_LIST     = {"default":""}  
+# v2.4
+SHADOWS                = 0   
+TASK_SHADOW_COLOR      = "0xffffff"
+FOCUSED_SHADOW_COLOR   = "0xffffff"
+SHADED_SHADOW_COLOR    = "0xffffff"
+MINIMIZED_SHADOW_COLOR = "0xffffff" 
+DESKTOP_SHADOW_COLOR   = "0xffffff"
+CLOCK_SHADOW_COLOR     = "0xffffff"
 
 #-------------------------
 if __name__ == "__main__":
@@ -910,8 +941,11 @@ if __name__ == "__main__":
         sys.exit()
         
     # Version check
-    main   = 2.3
+    main   = 2.4
     config = globals().get("VERSION", None)
+    
+    # Set locale to user's default
+    locale.setlocale(locale.LC_ALL, "")
     
     if not config or config != main:
         sys.stderr.write("\npypanelrc version : %s\n" % config)
