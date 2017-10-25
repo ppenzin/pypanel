@@ -1,78 +1,103 @@
------------------------------------------------------------------------------
-PyPanel v1.3 Copyright (c) 2003-2004 Jon Gelo (ziljian@users.sourceforge.net)
-Distributed under the GNU General Public License v2, see COPYING for details.
------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+ PyPanel v2.0 Copyright (c) 2003-2004 Jon Gelo (ziljian@users.sourceforge.net)
+ Distributed under the GNU General Public License v2, see COPYING for details.
+-------------------------------------------------------------------------------
 PyPanel is a lightweight panel/taskbar written in Python and C for X11 window
-managers. It can be easily customized to match any desktop theme or taste.
+managers.  It can be easily customized to match any desktop theme or taste.
 PyPanel works with WindowMaker and EWMH compliant WMs (Kahakai, Openbox, FVWM,
 PekWM, etc). 
 
-The panel displays tasks running on the current workspace (desktop) and can
-also be configured to display the current workspace name, date/time and
-a system tray (notification area).
+The panel displays currently running tasks/applications and can also be
+configured to display the current desktop name, date/time and a system tray
+(notification area).
+
+When the panel is minimized, either manually or by autohide, it can be restored
+by moving the mouse over the top or bottom of the screen where the panel was
+displayed prior to minimization.
+
+All image rendering (icons and background transparency/tinting) is handled by
+Imlib2.
 
 The handling of button events on the panel objects is handled by the 
 ~/.pypanelrc configuration file.  The file is a python script which gets 
-imported when pypanel is invoked, ensure it contains no syntax errors or
-the panel will not start!
+imported/executed when PyPanel is invoked, ensure it contains proper Python
+formatting and no syntax errors or the panel will not start!
     
------------------------------------------------------------------------------
-                       Requirements (Minimum versions)
------------------------------------------------------------------------------
-1. Python v2.2             http://www.python.org
-2. Python X Library v0.12  http://python-xlib.sourceforge.net
-3. libXpm v3.4 (optional)  http://koala.ilog.fr/lehors/xpm.html
-4. libXft v1.0 (optional)  http://fontconfig.org
+-------------------------------------------------------------------------------
+                        Requirements (Minimum versions)
+-------------------------------------------------------------------------------
+1. Python v2.2                  http://www.python.org
+2. Python X Library v0.12       http://python-xlib.sourceforge.net
+3. Imlib2 v1.1.1                http://www.enlightenment.org/pages/imlib2.html
+4. libXft v1.0 (optional)       http://fontconfig.org
 
------------------------------------------------------------------------------
-                     Installation (Upgrading) & Starting
------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+                      Installation (Upgrading) & Starting
+-------------------------------------------------------------------------------
 1. python setup.py install
 2. pypanel &
-3. If upgrading to 1.3, you'll need to replace/merge your current 
+3. If upgrading to 2.0, you'll need to replace/merge your current 
    ~/.pypanelrc with the new version:
  
-   a. Move your current ~/.pypanelrc to a backup location or name
-   b. Start pypanel so a new ~/.pypanelrc is created
+   a. Move your current ~/.pypanelrc to a backup location or backup name
+   b. Start PyPanel so a new ~/.pypanelrc is created
    c. Kill the panel process
    d. Merge any changes you wish to keep from your backup config to the
       new version
 
------------------------------------------------------------------------------
-                               Uninstallation
------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+                                Uninstallation
+-------------------------------------------------------------------------------
 PyPanel installs the following files -
 
 1. /usr/bin/pypanel (may be in /usr/local/bin or other depending on system)
-2. <path to your Python library>/site-packages/ppmodule.so (or .sl)
+2. <path to your Python library>/site-packages/ppmodule.so (.sl)
 3. <path to your Python library>/site-packages/pypanel/
 4. ~/.pypanelrc
 
------------------------------------------------------------------------------
-                                Configuration
------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+                                 Configuration
+-------------------------------------------------------------------------------
 1. Configuration is handled via the ~/.pypanelrc python script, it's
-   'executed' when pypanel is started.
+   'executed' when PyPanel is started.
 2. If the level of customization from the config script isn't enough, hack
-   the pypanel script itself.
+   the PyPanel script itself.
 
------------------------------------------------------------------------------
-                                Contributions
------------------------------------------------------------------------------
-1. The default app icon included in this distribution is from the Amaranth
+-------------------------------------------------------------------------------
+                                 Contributions
+-------------------------------------------------------------------------------
+1. My sincerest thanks to the many PyPanel users who have shared their ideas,
+   suggestions, comments, code snippets and overall support for this project.
+2. The default app icon included with this distribution is from the Amaranth
    icon set by Michael Doches.  Available from http://www.kde-look.org
-2. The shading routine came largely from Sasha Vasko's AfterStep term.
-   Available from http://aterm.sourceforge.net
-   
------------------------------------------------------------------------------   
-                                   Contact
------------------------------------------------------------------------------
-Jon Gelo (ziljian@users.sourceforge.net)
+      
+-------------------------------------------------------------------------------   
+                                    Contact
+-------------------------------------------------------------------------------
+Jon Gelo 
+ziljian@users.sourceforge.net
 http://pypanel.sourceforge.net
 
------------------------------------------------------------------------------
-                                   History
------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+                                    History
+-------------------------------------------------------------------------------
+040926 v2.0   - New features/options:
+                Now using Imlib2 for all image rendering
+                Panel background tinting using BG_COLOR
+                Show desktop function (EWMH only)
+                Show apps from all desktops
+                EWMH task ordering (oldest to newest, left to right)
+                Support for XFWM4
+                Autohiding (AUTOHIDE)
+                Minimized panel now restored by moving mouse over the top or
+                bottom of the screen where the panel was displayed
+                Ability to define the clock update interval (CLOCK_DELAY)
+                Ability to define each desktop's name (DESKTOP_NAMES)
+                Ability to define a custom default app icon (ICON)
+                Bug fixes:
+                Clock overwriting 
+                Font/text display issues
+                Background change garbled panel text
 040719 v1.3   - Added a System Tray
                 More flexibility for the panel layout
                 Tweaked the config

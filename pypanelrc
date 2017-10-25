@@ -1,88 +1,167 @@
-#----------------------------------------------------------------------------
-#                         PyPanel v1.3 Configuration
-#----------------------------------------------------------------------------
-
-BG_COLOR        = "0x122744"    # Panel background color (hex triplet)
-TASK_COLOR      = "0x7d7d7d"    # Normal task name color 
-FOCUSED_COLOR   = "0xffffff"    # Focused task name color
-SHADED_COLOR    = "0x9d9d9d"    # Shaded task name color 
-MINIMIZED_COLOR = "0x606060"    # Minimized task name color
-WS_COLOR        = "0xffffff"    # Workspace name color 
-CLOCK_COLOR     = "0xffffff"    # Clock text color
-LINE_COLOR      = "0x606060"    # Vertical task seperator line color 
-APPICONS        = 1             # Show application icons (1 yes / 0 no)
-SHOWLINES       = 1             # Show object seperation lines (1 yes / 0 no)
-TRANSPARENCY    = 1             # Use transparent background (1 yes / 0 no)
-SHADE           = 70            # Transparency shading (0 [black] - 100 [clear])
-P_LOCATION      = 1             # Top/Bottom placement (0 top / 1 bottom)
-P_START         = 0             # Starting X coordinate of the panel (pixel)
-P_SPACER        = 6             # Spacing between panel objects (pixels)
-P_HEIGHT        = 24            # Panel height (pixels)
-P_WIDTH         = 0             # Panel width (pixels), 0 = full screen width
-I_HEIGHT        = 16            # Task icon height (pixels)
-I_WIDTH         = 16            # Task icon Width (pixels)
-TRAY_I_WIDTH    = 24            # System tray icon width  (usually 16 or 24)
-TRAY_I_HEIGHT   = 24            # System tray icon height (usually 16 or 24)
-CLOCK_FORMAT    = "%Y-%m-%d %H:%M" # 'man strftime' for formatting options
-HIDE_LIST       = []            # Apps in this list won't be displayed on the
-                                # panel.  Add apps by their WM_CLASS name
-                                # found using 'xprop'.
-                                # ex. ["xmms", "xine", "gDesklets"]
-
-# Panel Font
-#FONT = "-schumacher-clean-medium-r-normal-*-12-*-*-*-*-*-*-*"
-FONT = "bitstream vera sans-8"
-
-
-# Panel Layout -
+#------------------------------------------------------------------------------
 #
-#   ----------------------------
-#   [  1  ][  2  ][  3  ][  4  ]
-#   ----------------------------
+#                         PyPanel v2.0 Configuration
+#
+# This configuration file is a Python script that will be executed when
+# PyPanel is started.  In order for PyPanel to start properly, make sure that
+# this file contains proper Python formatting and no syntax errors.
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Colors: Format is hex triplet - 0xrrggbb
+#------------------------------------------------------------------------------
+BG_COLOR        = "0xd6d6d6"    # Panel background and tinting color
+TASK_COLOR      = "0x000000"    # Normal task name color 
+FOCUSED_COLOR   = "0x1826de"    # Focused task name color
+SHADED_COLOR    = "0x808080"    # Shaded task name color 
+MINIMIZED_COLOR = "0x808080"    # Minimized task name color 
+DESKTOP_COLOR   = "0x000000"    # Desktop name color
+CLOCK_COLOR     = "0x000000"    # Clock text color
+LINE_COLOR      = "0x606060"    # Vertical line color
+
+#------------------------------------------------------------------------------
+# Panel Spacing and Location Options: Measured in pixels
+#------------------------------------------------------------------------------
+P_LOCATION      = 1             # Panel placement: 0 = top, 1 = bottom
+P_WIDTH         = 0             # Panel width: 0 = Use full screen width
+P_START         = 0             # Starting X coordinate of the panel
+P_SPACER        = 6             # Spacing between panel objects
+P_HEIGHT        = 24            # Panel height
+
+#------------------------------------------------------------------------------
+# Icon Size Options: Measured in pixels
+#------------------------------------------------------------------------------
+I_HEIGHT        = 16            # Application icon height
+I_WIDTH         = 16            # Application icon Width 
+TRAY_I_HEIGHT   = 24            # System tray icon height (usually 16 or 24)
+TRAY_I_WIDTH    = 24            # System tray icon width  (usually 16 or 24)
+
+#------------------------------------------------------------------------------
+# Panel Clock Format: 'man strftime' for detailed formatting options and help
+#------------------------------------------------------------------------------
+CLOCK_FORMAT    = "%Y-%m-%d %H:%M"    # Ex: 2004-09-25 17:45 
+
+#------------------------------------------------------------------------------
+# Clock Delay: Seconds between each clock update during periods of inactivity
+#------------------------------------------------------------------------------
+CLOCK_DELAY     = 20
+
+#------------------------------------------------------------------------------
+# Hidden Application List: Apps listed here will not be display on the panel
+# The application name is its WM_CLASS name, use 'xprop' to find WM_CLASS
+# Ex: ["xmms", "xine", "gDesklets"]
+#------------------------------------------------------------------------------
+HIDE_LIST       = []            
+                   
+#------------------------------------------------------------------------------
+# Panel Text Font: This option takes either a traditional or Xft font string 
+# Ex: "-schumacher-clean-medium-r-normal-*-12-*-*-*-*-*-*-*"
+#     "aquafont-8" 
+#------------------------------------------------------------------------------
+FONT            = "bitstream vera sans-8"
+
+#------------------------------------------------------------------------------
+# Show All Applications: Show apps from all desktops or just the current
+# 0: Disabled - only applications on the current desktop will be displayed
+# 1: Enabled  - Selected apps are moved to the current desktop (EWMH only)
+# 2: Enabled  - Current desktop is changed to the selected apps desktop
+#------------------------------------------------------------------------------
+SHOWALL         = 0             # 0, 1 or 2 - see descriptions above
+
+#------------------------------------------------------------------------------
+# Default Application Icon: Used for applications with no icon
+# Use the full path to the desired image, most formats are supported by Imlib2
+# If the option is "", PyPanel will use its own default icon
+#------------------------------------------------------------------------------
+ICON            = ""
+
+#------------------------------------------------------------------------------
+# Background Alpha/Shade Level: 0 (Fully Translucent) -> 255 (Fully Opaque)
+# BG_COLOR is used for tinting
+#------------------------------------------------------------------------------
+SHADE           = 50
+
+#------------------------------------------------------------------------------
+# Misc. Options: 1 = Enabled/Yes, 0 = Disabled/No
+#------------------------------------------------------------------------------
+APPICONS        = 1             # Show application icons
+AUTOHIDE        = 0             # Autohide uses the CLOCK_DELAY timer above
+SHOWLINES       = 1             # Show object seperation lines
+
+#------------------------------------------------------------------------------
+# Desktop Names: Configure the names of your desktops
+# If the option is [], PyPanel will attempt to use the desktop name specified
+# by the XServer, if that fails it will use the desktop number as its name
+# Ex. ["One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight"]
+#------------------------------------------------------------------------------
+DESKTOP_NAMES   = []
+
+#------------------------------------------------------------------------------
+# Panel Layout:          ----------------------------
+#                        [  1  ][  2  ][  3  ][  4  ]
+#                        ----------------------------
 #
 # The panel layout is split into 4 sections numbered 1, 2, 3 or 4 as shown
 # in the diagram above.  Each of the following objects can be enabled by
 # assigning it a section number or disabled by assigning it 0:
-# workspace name, task names, clock and system tray.
+#------------------------------------------------------------------------------
+DESKTOP         = 1             # Desktop name section
+TASKS           = 2             # Task names section (cannot be disabled!) 
+TRAY            = 3             # System tray section
+CLOCK           = 4             # Clock section
 
-WORKSPACE = 1   # Workspace name section
-TASKS     = 2   # Task names section (cannot be disabled!) 
-TRAY      = 3   # System tray section
-CLOCK     = 4   # Clock section
 
-#----------------------------------------------------------------------------
-#                    Button Event Function Definitions
-#----------------------------------------------------------------------------
+
+
+#------------------------------------------------------------------------------
+#                       Button Event Function Definitions
+#------------------------------------------------------------------------------
 # Left click   - button 1 
 # Middle click - button 2
 # Right click  - button 3
 # Wheel up     - button 4
 # Wheel down   - button 5 
 #
-# changeWorkspace(num) - increase/decrease the current workspace by num
-# toggleShade(task)    - shade/unshade a task
-# toggleHidden(side)   - minimize the panel to the "right" or "left"
-# toggleMinimize(task, traise=1) - iconify/deiconify a task and raise it
-# taskRaise(task, focus=0) - raise a task and optionally give it input focus
-# taskLower(task, focus=0) - lower a task and optionally give it input focus
-# taskFocus(task)          - focus a task else toggle its minimization
-#----------------------------------------------------------------------------
+# changeDesktop(x)
+# - Change Desktop: Increase or decrease the current desktop by 'x' amount
+# 
+# toggleShade(task)
+# - Shade or Unshade an application
+#
+# toggleHidden()
+# - Minimize the panel to the top or bottom depending on its start location
+#
+# toggleMinimize(task, traise=1)
+# - Minimize or Unminimize an application and optionally raise it
+#
+# taskRaise(task, focus=1)
+# - Raise an application to the top of the window list and optionally focus it 
+#
+# taskLower(task, focus=0)
+# - Lower an app to the bottom of the window list and optionally focus it
+#
+# taskFocus(task)
+# - Give focus to the selected application, if it has focus then minimize it
+#
+# showDesktop()
+# - Toggle between hiding and unhiding ALL applications
+#------------------------------------------------------------------------------
 
-#-------------------------------------
-def workSpaceButtonEvent(pp, button):
-#-------------------------------------
-    """ Button event handler for the panel's workspace object """
+#----------------------------------
+def desktopButtonEvent(pp, button):
+#----------------------------------
+    """ Button event handler for the panel's desktop object """
         
     if button == 1:
-        pp.changeWorkspace(-1)
+        pp.changeDesktop(-1)
     elif button == 2:
-        pp.changeWorkspace(2)
+        pp.changeDesktop(2)
     elif button == 3:
-        pp.changeWorkspace(1)
+        pp.changeDesktop(1)
     elif button == 4:
-        pp.changeWorkspace(1)
+        pp.changeDesktop(1)
     elif button == 5:
-        pp.changeWorkspace(-1)
+        pp.changeDesktop(-1)
         
 #--------------------------------
 def clockButtonEvent(pp, button):
@@ -94,11 +173,11 @@ def clockButtonEvent(pp, button):
     elif button == 2:
         pass
     elif button == 3:
-        pp.toggleHidden("right")  
+        pp.toggleHidden()  
     elif button == 4:
-        pass
+        pp.showDesktop()
     elif button == 5:
-        pass
+        pp.showDesktop()
         
 #-------------------------------------
 def taskButtonEvent(pp, button, task):
@@ -106,14 +185,14 @@ def taskButtonEvent(pp, button, task):
     """ Button event handler for the panel's tasks """
     
     if button == 1:
-        #pp.toggleMinimize(task)
         pp.taskFocus(task)
     elif button == 2:
-        task.obj.destroy() # destroy task
+        # Destroy the application
+        task.obj.destroy()
     elif button == 3:
-        # Example - XMMS doesn't shade, so attempting to shade it
-        #           here will minimize it instead.  task.tclass is the 
-        #           tasks class name (WM_CLASS).
+        # Ex. - XMMS doesn't shade, so we want to minimize it instead and
+        #       still use button 3 to shade other applications
+        #       task.tclass is the tasks class name (WM_CLASS)
         if "xmms" in task.tclass:
             pp.toggleMinimize(task)
         else:
@@ -123,4 +202,3 @@ def taskButtonEvent(pp, button, task):
     elif button == 5:
         pp.taskLower(task, focus=0)
         
-    

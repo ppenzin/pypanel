@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/python -O
 """
-PyPanel v1.3 - Lightweight panel/taskbar for X11 window managers
+PyPanel v2.0 - Lightweight panel/taskbar for X11 window managers
 Copyright (c) 2003-2004 Jon Gelo (ziljian@users.sourceforge.net)
 
 This program is free software; you can redistribute it and/or
@@ -17,6 +17,16 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 """
+
+#----------------------------------------------------------------------------                
+class Obj(object):
+#---------------------------------------------------------------------------- 
+    """ Multi-purpose class """
+    #----------------------------
+    def __init__(self, **kwargs):
+    #---------------------------- 
+        self.__dict__.update(kwargs)
+        
 #----------------------------------------------------------------------------
 class PyPanel(object):
 #----------------------------------------------------------------------------
@@ -28,16 +38,14 @@ class PyPanel(object):
         self.screen  = display.screen()          # Screen obj
         self.root    = self.screen.root          # Display root
         self.depth   = self.screen.root_depth    # Screen depth
-        self.gc      = self.root.create_gc()     # General gfx context
         self.error   = error.CatchError()        # Error Handler/Suppressor
         self.panel   = {"sections":[]}           # Panel data and layout
         self.colors  = {}                        # Alloc'd colors
         self.hidden  = 0                         # Panel hidden/minimized
         self.focus   = 0                         # Currently focused window
+        self.rpm     = None                      # Root pixmap ID
         
         # Misc. initializations
-        ppinit(FONT)
-        
         if SHOWLINES:
             self.lgc = self.root.create_gc(foreground=self.getColor(LINE_COLOR))
         
@@ -53,23 +61,19 @@ class PyPanel(object):
         self.window = self.screen.root.create_window(P_START, P_LOCATION,
             P_WIDTH, P_HEIGHT, 0, self.depth, window_class=X.InputOutput,
             visual=X.CopyFromParent, colormap=X.CopyFromParent,
-            event_mask=(X.ExposureMask|X.ButtonPressMask|X.ButtonReleaseMask))
+            event_mask=(X.ExposureMask|X.ButtonPressMask|X.ButtonReleaseMask|X.EnterWindowMask))
+        ppinit(self.window.id, FONT, ICON)
         
-        if not TRANSPARENCY:
-            self.window.change_attributes(background_pixel=self.getColor(BG_COLOR))
-        else:
-            ppshade(self.window.id, SHADE, P_START, P_LOCATION, P_WIDTH, P_HEIGHT)
-                
         # Init the panel sections
-        if WORKSPACE:
-            self.panel["sections"].append(WORKSPACE)
-            self.panel[WORKSPACE] = Obj(id="workspace", last=0, color=self.getColor(WS_COLOR))
+        if DESKTOP:
+            self.panel["sections"].append(DESKTOP)
+            self.panel[DESKTOP] = Obj(id="desktop", last=0, color=self.getColor(DESKTOP_COLOR))
         if CLOCK:
             self.panel["sections"].append(CLOCK)
             self.panel[CLOCK] = Obj(id="clock", last=0, color=self.getColor(CLOCK_COLOR))
         if TASKS:
             self.panel["sections"].append(TASKS)
-            self.panel[TASKS] = Obj(id="tasks", tasks={}, last=0)
+            self.panel[TASKS] = Obj(id="tasks", tasks={}, order=[], last=0)
         if TRAY:
             self.panel["sections"].append(TRAY)
             self.panel[TRAY] = Obj(id="tray", tasks={}, last=0, window=self.window)
@@ -82,7 +86,8 @@ class PyPanel(object):
         self.setProps(self.display, self.window)
         self.root.change_attributes(event_mask=(X.PropertyChangeMask)) 
         self.window.map()
-        self.loop(self.display, self.root, self.window, self.ewmh, self.panel)
+        self.display.flush()
+        self.loop(self.display, self.root, self.window, self.panel)
         
     #------------------------------
     def createTray(self, dsp, scr):
@@ -96,7 +101,7 @@ class PyPanel(object):
         self.selowin = scr.root.create_window(-1, -1, 1, 1, 0, self.depth)
         self.selowin.set_selection_owner(selection, X.CurrentTime)
         self.sendEvent(self.root, manager, [X.CurrentTime, selection,
-            self.selowin.id], mask=(X.StructureNotifyMask))
+            self.selowin.id], (X.StructureNotifyMask))
                         
     #--------------------------------------
     def setStruts(self, win, option="set"):
@@ -133,6 +138,7 @@ class PyPanel(object):
         win.change_property(dsp.intern_atom("_MOTIF_WM_HINTS"),
             dsp.intern_atom("_MOTIF_WM_HINTS"), 32, [0x2, 0x0, 0x0, 0x0, 0x0])
         
+        self._SHOWING_DESKTOP = dsp.intern_atom("_NET_SHOWING_DESKTOP")
         self._CHANGE_STATE    = dsp.intern_atom("WM_CHANGE_STATE")
         self._CURRENT_DESKTOP = dsp.intern_atom("_NET_CURRENT_DESKTOP")
         self._SKIP_TASKBAR    = dsp.intern_atom("_NET_WM_STATE_SKIP_TASKBAR")
@@ -143,36 +149,36 @@ class PyPanel(object):
         self._STRUTP          = dsp.intern_atom("_NET_WM_STRUT_PARTIAL")
         self._STRUT           = dsp.intern_atom("_NET_WM_STRUT")
         self._NAME            = dsp.intern_atom("_NET_WM_NAME")
-        self.openbox          = dsp.intern_atom("_OPENBOX_PID", 1)
-
-        if not dsp.intern_atom("_WINDOWMAKER_NOTICEBOARD", 1):
+        self._RPM             = dsp.intern_atom("_XROOTPMAP_ID")
+        self._ICON            = dsp.intern_atom("_NET_WM_ICON", 1)
+        
+        if EWMH:
             # EWMH specific hints
-            self.ewmh = 1
-            self._WORKSPACE_NAMES = dsp.intern_atom("_NET_DESKTOP_NAMES")             
-            self._NUM_WORKSPACES  = dsp.intern_atom("_NET_NUMBER_OF_DESKTOPS")
-            self._WORKSPACE       = dsp.intern_atom("_NET_WM_DESKTOP")
+            self._DESKTOP_NAMES   = dsp.intern_atom("_NET_DESKTOP_NAMES")             
+            self._NUM_DESKTOPS    = dsp.intern_atom("_NET_NUMBER_OF_DESKTOPS")
+            self._DESKTOP         = dsp.intern_atom("_NET_WM_DESKTOP")
             self._CLIENT_LIST     = dsp.intern_atom("_NET_CLIENT_LIST")
             self._STATE           = dsp.intern_atom("_NET_WM_STATE")
-            win.change_property(dsp.intern_atom("_NET_WM_WINDOW_TYPE"),
-                Xatom.ATOM, 32, [dsp.intern_atom("_NET_WM_WINDOW_TYPE_DOCK")])
-            win.change_property(self._WORKSPACE, Xatom.CARDINAL, 32, [0xffffffffL])
+            win.change_property(self._DESKTOP, Xatom.CARDINAL, 32, [0xffffffffL])
+            if not XFWM4:
+                win.change_property(dsp.intern_atom("_NET_WM_WINDOW_TYPE"),
+                    Xatom.ATOM, 32, [dsp.intern_atom("_NET_WM_WINDOW_TYPE_DOCK")])
             self.setStruts(win)
         else:
             # Window Maker specific hints
-            self.ewmh = 0
-            self._WORKSPACE_NAMES = dsp.intern_atom("_WIN_WORKSPACE_NAMES") 
-            self._NUM_WORKSPACES  = dsp.intern_atom("_WIN_WORKSPACE_COUNT")
-            self._WORKSPACE       = dsp.intern_atom("_WIN_WORKSPACE")
-            self._CLIENT_LIST     = dsp.intern_atom("_WIN_CLIENT_LIST")
-            self._STATE           = dsp.intern_atom("_WIN_STATE")
-            win.change_property(self._WORKSPACE, Xatom.CARDINAL, 16, [0])
-            win.change_property(self._STATE, Xatom.CARDINAL, 16, [1])
+            self._DESKTOP_NAMES = dsp.intern_atom("_WIN_WORKSPACE_NAMES") 
+            self._NUM_DESKTOPS  = dsp.intern_atom("_WIN_WORKSPACE_COUNT")
+            self._DESKTOP       = dsp.intern_atom("_WIN_WORKSPACE")
+            self._CLIENT_LIST   = dsp.intern_atom("_WIN_CLIENT_LIST")
+            self._STATE         = dsp.intern_atom("_WIN_STATE")
+            win.change_property(self._DESKTOP, Xatom.CARDINAL, 32, [0])
+            win.change_property(self._STATE, Xatom.CARDINAL, 32, [1])
             win.change_property(dsp.intern_atom("_WIN_LAYER"), Xatom.CARDINAL, 32, [10])
             win.change_property(dsp.intern_atom("_WIN_HINTS"), Xatom.CARDINAL, 32, [39])
             
-    #-----------------------------------------------------------
-    def setState(self, task, panel, draw=0, dsp=None, win=None):
-    #-----------------------------------------------------------
+    #-------------------------------------------------
+    def setState(self, task, panel, draw=0, win=None):
+    #-------------------------------------------------
         """ Set/Update a tasks state and add it to the task list """
         try:
             state = task.obj.get_wm_state()
@@ -190,7 +196,7 @@ class PyPanel(object):
         else:
             task.color = self.getColor(TASK_COLOR)
             try:
-                if self.ewmh:
+                if EWMH:
                     if self._SHADED in task.obj.get_full_property(self._STATE,
                         Xatom.ATOM).value:
                         task.color = self.getColor(SHADED_COLOR)
@@ -200,25 +206,57 @@ class PyPanel(object):
             except:
                 pass
         if draw:
-            x = task.x1 + P_SPACER
+            x = task.x1+P_SPACER
             if APPICONS:
-                ppicon(win.id, task.obj.id, x, (P_HEIGHT-I_HEIGHT)/2, I_WIDTH,
-                    I_HEIGHT)
                 x += I_WIDTH+P_SPACER
-            win.clear_area(x, 0, task.x2 - x, P_HEIGHT)
-            dsp.sync()
+            ppclear(win.id, x, 0, task.x2-x, P_HEIGHT)
             ppfont(win.id, task.color, x, P_HEIGHT, task.x2-x-P_SPACER, task.name)
+        
         panel[TASKS].tasks[task.id] = task
-    
-    #----------------------------
-    def getWS(self, task, root=0):
-    #----------------------------
-        """ Return the workspace number of the given task obj """
+        if not task.id in panel[TASKS].order:
+            panel[TASKS].order.append(task.id)
+            
+    #--------------------------
+    def getIcon(self, task, x):
+    #--------------------------
+        """ Get the icon from the given task and draw it at x """
+        if not APPICONS: 
+            return 0
+        
+        y = (P_HEIGHT-I_HEIGHT)/2             
         try:
-            if self.ewmh and root:
+            # _net_wm_icon
+            data = task.obj.get_full_property(self._ICON, 0)
+            if data:
+                data = data.value[:]
+                w    = data[0]
+                h    = data[1]
+                return ppicon(self.window.id, 0, 0, x, y, w, h, I_WIDTH,
+                    I_HEIGHT, data[2:w*h+2].tostring())
+            else:
+                # wmhints icon
+                try:
+                    hints = task.obj.get_wm_hints()
+                    geom  = hints.icon_pixmap.get_geometry()
+                    return ppicon(self.window.id, hints.icon_pixmap.id,
+                        hints.icon_mask.id, x, y, geom.width, geom.height,
+                        I_WIDTH, I_HEIGHT, "")
+                except:
+                    raise
+        except:
+            # default icon
+            return ppicon(self.window.id, 0, 0, x, y, 0, 0,
+                I_WIDTH, I_HEIGHT, "")
+    
+    #----------------------------------
+    def getDesktop(self, task, root=0):
+    #----------------------------------
+        """ Return the desktop number of the given task obj """
+        try:
+            if EWMH and root:
                 return task.get_full_property(self._CURRENT_DESKTOP,
                     Xatom.CARDINAL).value[0]
-            return task.get_full_property(self._WORKSPACE, Xatom.CARDINAL).value[0]
+            return task.get_full_property(self._DESKTOP, Xatom.CARDINAL).value[0]
         except:
             return None 
             
@@ -249,16 +287,16 @@ class PyPanel(object):
         """ Return the name of the given task obj """
         try:
             name = None
-            if self.ewmh:
+            if EWMH:
                 name = task.get_full_property(self._NAME, X.AnyPropertyType)
-            if not name or not self.ewmh:
+            if not name or not EWMH:
                 name = task.get_full_property(Xatom.WM_NAME, X.AnyPropertyType)
             if not name:
-                return ""
+                return "<no name>"
             else:
                 return name.value
         except:
-            return ""
+            return "<no name>"
         
     #------------------------------------------------
     def sendEvent(self, win, ctype, data, mask=None):
@@ -272,12 +310,12 @@ class PyPanel(object):
             mask = (X.SubstructureRedirectMask|X.SubstructureNotifyMask)
         self.root.send_event(ev, event_mask=mask)
                                              
-    #------------------------------
-    def changeWorkspace(self, num):
-    #------------------------------
-        """ Increase/Decrease the current workspace number by num """
-        cur = self.getWS(self.root, 1) + num
-        tot = self.root.get_full_property(self._NUM_WORKSPACES,
+    #----------------------------
+    def changeDesktop(self, num):
+    #----------------------------
+        """ Increase/Decrease the current desktop number by num """
+        cur = self.getDesktop(self.root, 1) + num
+        tot = self.root.get_full_property(self._NUM_DESKTOPS,
             X.AnyPropertyType).value[0] - 1
 
         if cur < 0:
@@ -285,44 +323,53 @@ class PyPanel(object):
         elif cur > tot:
             cur = 0
             
-        if self.ewmh:
+        if EWMH:
             self.sendEvent(self.root, self._CURRENT_DESKTOP, [cur])
         else:
-            self.sendEvent(self.root, self._WORKSPACE, [cur])
+            self.sendEvent(self.root, self._DESKTOP, [cur])
+            
+    #---------------------
+    def showDesktop(self):
+    #---------------------
+        """ Toggle between hiding and unhiding ALL applications """
+        try:  
+            showing = self.root.get_full_property(self._SHOWING_DESKTOP,
+                X.AnyPropertyType).value[0]
+                
+            if showing == 0:     
+                self.sendEvent(self.root, self._SHOWING_DESKTOP, [1])
+            else:
+                self.sendEvent(self.root, self._SHOWING_DESKTOP, [0])
+        except:
+            pass
         
-    #---------------------------------
-    def toggleHidden(self, side=None):
-    #---------------------------------
+    #----------------------
+    def toggleHidden(self):
+    #----------------------
         """ Hide/Unhide the Panel """
         if self.hidden:
-            self.window.configure(x=P_START, y=P_LOCATION, width=P_WIDTH)
+            self.window.configure(y=P_LOCATION, height=P_HEIGHT)
             self.setStruts(self.window, "set")
-            self.hidden = 0
             self.sendEvent(self.window, self._STATE, [0, self._BELOW])
             self.sendEvent(self.window, self._STATE, [1, self._ABOVE])
         else:
-            width = 12 # Width of minimized panel
-            if side == "right":
-                x = self.screen.width_in_pixels - width
-                self.arrow = "<"
-            else:
-                x = 0
-                self.arrow = ">"
+            if P_LOCATION:
+                y = self.screen.height_in_pixels - 2
+            else: 
+                y = 0
             
-            self.hidden = 1
-            self.window.clear_area()
-            self.window.configure(x=x, y=P_LOCATION, width=width)
-            self.display.sync()
-            ppfont(self.window.id, self.getColor(LINE_COLOR), 1, P_HEIGHT, 0, self.arrow)
+            self.window.configure(y=y, height=2)
             self.setStruts(self.window, "unset")
             self.sendEvent(self.window, self._STATE, [1, self._BELOW])
             self.sendEvent(self.window, self._STATE, [0, self._ABOVE])
             
+        self.hidden = not self.hidden
+            
     #----------------------------------------
     def toggleMinimize(self, task, traise=1):
     #----------------------------------------
-        """ Iconify/Deiconify a task """
-        if self.ewmh and not self.openbox:
+        """ Iconify/Deiconify a task """ 
+        if EWMH and not OPENBOX and not XFWM4:
             self.sendEvent(task.obj, self._STATE, [2, self._HIDDEN])
         else:
             if task.state == Xutil.NormalState:
@@ -336,14 +383,14 @@ class PyPanel(object):
     def toggleShade(self, task):
     #---------------------------
         """ Shade/Unshade a task """
-        if self.ewmh:
+        if EWMH:
             self.sendEvent(task.obj, self._STATE, [2, self._SHADED])
         else:
             if task.obj.get_full_property(self._STATE, Xatom.CARDINAL).value[0] == 0:
                 shade = 32
             else:
                 shade = 0
-            task.obj.change_property(self._STATE, Xatom.CARDINAL, 16, [shade])
+            task.obj.change_property(self._STATE, Xatom.CARDINAL, 32, [shade])
             task.obj.unmap()
             task.obj.map()
             
@@ -374,52 +421,116 @@ class PyPanel(object):
             if focus:
                 task.obj.set_input_focus(X.RevertToNone, X.CurrentTime)
                 
+    #---------------------------------------
+    def buttonRelease(self, root, panel, e):
+    #---------------------------------------
+        """ Button Release event handler """
+        x = e.event_x
+        for section in panel["sections"]:
+            if panel[section].id == "tray":
+                continue
+            elif panel[section].id == "desktop":
+                if x > panel[section].x1 and x < panel[section].x2:
+                    desktopButtonEvent(self, e.detail)
+                    return
+            elif panel[section].id == "clock":
+                if x > panel[section].x1 and x < panel[section].x2:
+                    clockButtonEvent(self, e.detail)
+                    return
+            else:
+                for t in panel[TASKS].tasks.values():
+                    if x > t.x1 and x < t.x2:
+                        cdt = self.getDesktop(root, 1)
+                        tdt = self.getDesktop(t.obj)
+                        if SHOWALL and cdt != tdt and tdt != 0xffffffffL:
+                            if SHOWALL == 1:
+                                # Move task to current desktop
+                                if EWMH:
+                                    self.sendEvent(t.obj, self._DESKTOP, [cdt])
+                                else:
+                                    # Can't move task to current desktop under
+                                    # WindowMaker, just switch to its desktop
+                                    self.sendEvent(root, self._DESKTOP, [tdt])
+                            elif SHOWALL == 2:
+                                # Switch to tasks desktop
+                                if EWMH:
+                                    self.sendEvent(root, self._CURRENT_DESKTOP, [tdt])
+                                else:
+                                    self.sendEvent(root, self._DESKTOP, [tdt])
+                                
+                            t.obj.map()
+                            t.obj.configure(stack_mode=X.Above)
+                        else:
+                            taskButtonEvent(self, e.detail, t)
+                        return
+                
+    #-------------------------------------
+    def updateBackground(self, root, win):
+    #-------------------------------------
+        """ Update the panel background """   
+        rpm = root.get_full_property(self._RPM, X.AnyPropertyType)
+        
+        if rpm:
+            rpm = rpm.value[0]
+        else:
+            rpm = root.id
+            
+        if self.rpm != rpm:
+            self.rpm = rpm
+            r = int("0x"+BG_COLOR[2:4],0)
+            g = int("0x"+BG_COLOR[4:6],0)
+            b = int("0x"+BG_COLOR[6:8],0)
+            ppshade(win.id, rpm, P_START, P_LOCATION, P_WIDTH, P_HEIGHT,
+                r, g, b, SHADE)  
+                         
     #-------------------------------------------------
-    def updatePanel(self, dsp, root, win, cws, panel):
+    def updatePanel(self, dsp, root, win, cdt, panel):
     #-------------------------------------------------
-        """ Display the tasks, clock and workspace name on the panel """
-        tasks       = panel[TASKS].tasks
-        task_width  = P_WIDTH
-        curr_x      = 0
+        """ Display the tasks, clock and desktop name on the panel """
+        curr_x     = 0
+        tasks      = panel[TASKS].tasks
+        task_width = P_WIDTH
         
         if CLOCK:
             panel[CLOCK].name  = time.strftime(CLOCK_FORMAT, time.localtime())
             panel[CLOCK].width = ppfontsize(panel[CLOCK].name)
             task_width -= panel[CLOCK].width + P_SPACER*2
             
-        if WORKSPACE:
+        if DESKTOP:
             try:
-                panel[WORKSPACE].name = root.get_full_property(
-                    self._WORKSPACE_NAMES,
-                    X.AnyPropertyType).value.split("\x00")[cws]
+                if DESKTOP_NAMES:
+                    panel[DESKTOP].name = DESKTOP_NAMES[cdt]
+                else:
+                    panel[DESKTOP].name = root.get_full_property(
+                        self._DESKTOP_NAMES, X.AnyPropertyType).value.split("\x00")[cdt]
             except:
-                panel[WORKSPACE].name = str(cws)
-            panel[WORKSPACE].width = ppfontsize(panel[WORKSPACE].name)
-            task_width -= panel[WORKSPACE].width + P_SPACER*2
+                panel[DESKTOP].name = str(cdt+1)
+            panel[DESKTOP].width = ppfontsize(panel[DESKTOP].name)
+            task_width -= panel[DESKTOP].width + P_SPACER*2
             
         if TRAY:            
             task_width -= (len(panel[TRAY].tasks)*TRAY_I_WIDTH) + P_SPACER*2
 
-        if tasks:
+        if tasks:    
             name_limit = (task_width / len(tasks)) - (P_SPACER*2)
             if APPICONS:
                 name_limit -= I_WIDTH + P_SPACER
         
         # Clear the panel and add the objects
-        win.clear_area()
-        dsp.sync()        
+        self.updateBackground(root, win)
+        ppclear(win.id, 0, 0, 0, 0)
+              
         for section in panel["sections"]:
             if panel[section].id == "tasks":
                 if not tasks:
                     curr_x += task_width
                 else:
-                    count  = 1
-                    icon_y = (P_HEIGHT-I_HEIGHT)/2
-                    for t in tasks.values():
+                    count = 1
+                    for tid in panel[TASKS].order:
+                        t = tasks[tid]
                         tasks[t.id].x1 = curr_x
                         curr_x += P_SPACER
-                        if APPICONS:
-                            ppicon(win.id, t.obj.id, curr_x, icon_y, I_WIDTH, I_HEIGHT)
+                        if self.getIcon(t, curr_x):
                             curr_x += I_WIDTH + P_SPACER
                         ppfont(win.id, t.color, curr_x, P_HEIGHT, name_limit, t.name)
                         curr_x += name_limit + P_SPACER
@@ -435,16 +546,15 @@ class PyPanel(object):
                 curr_x += 2
                 for task in panel[TRAY].tasks.values():
                     task.x = curr_x
-                    task.y = y
+                    task.y = y   
                     task.obj.configure(x=curr_x, y=y, width=TRAY_I_WIDTH,
                          height=TRAY_I_HEIGHT, onerror=self.error)
-                    dsp.sync()
                     task.obj.map(onerror=self.error)
                     curr_x += TRAY_I_WIDTH + 1
                 if SHOWLINES and not panel[section].last:
                     win.poly_segment(self.lgc, [(curr_x, 0, curr_x, P_HEIGHT)])
             else:
-                # Clock or Workspace
+                # Clock or Desktop
                 panel[section].x1 = curr_x
                 curr_x += P_SPACER
                 ppfont(win.id, panel[section].color, curr_x, P_HEIGHT, 0,
@@ -457,10 +567,15 @@ class PyPanel(object):
     #--------------------------------------------
     def updateTasks(self, dsp, root, win, panel):
     #--------------------------------------------
-        """ Update the task list for the current workspace """
-        panel[TASKS].tasks = {}
-        cws   = self.getWS(root, 1)
+        """ Update the task list for the current desktop """
+        pt = panel[TASKS]
+        pt.tasks  = {}
+        pt.groups = {}
+        pt.order  = []
+        
+        cdt   = self.getDesktop(root, 1)
         tasks = root.get_full_property(self._CLIENT_LIST, X.AnyPropertyType)
+        
         if tasks and tasks.value:
             try:
                 self.focus = dsp.get_input_focus().focus.id
@@ -469,8 +584,8 @@ class PyPanel(object):
                 
             for task in tasks.value:
                 obj    = dsp.create_resource_object("window", task)
-                obj_ws = self.getWS(obj)
-                if obj_ws != None and (cws == obj_ws or obj_ws == 0xffffffffL):
+                obj_ws = self.getDesktop(obj)
+                if obj_ws != None and (SHOWALL or (cdt==obj_ws or obj_ws==0xffffffffL)):
                     try:
                         if self._SKIP_TASKBAR in obj.get_full_property(
                             self._STATE, X.AnyPropertyType).value: continue
@@ -491,77 +606,42 @@ class PyPanel(object):
                     
                 obj.change_attributes(event_mask=(X.PropertyChangeMask|
                     X.FocusChangeMask|X.StructureNotifyMask))
-                self.setState(Obj(id=task, obj=obj, name=name, tclass=tclass,
-                    x1=-1, x2=-1), panel)
-        self.updatePanel(dsp, root, win, cws, panel)
+                task = Obj(id=task, obj=obj, name=name, tclass=tclass, x1=-1, x2=-1)
+                self.setState(task, panel)
+                    
+        self.updatePanel(dsp, root, win, cdt, panel)
         
-    #---------------------------------
-    def buttonRelease(self, panel, e):
-    #---------------------------------
-        """ Button Release event handler """
-        x = e.event_x
-        for section in panel["sections"]:
-            if panel[section].id == "tray":
-                continue
-            elif panel[section].id == "workspace":
-                if x > panel[section].x1 and x < panel[section].x2:
-                    workSpaceButtonEvent(self, e.detail)
-                    return
-            elif panel[section].id == "clock":
-                if x > panel[section].x1 and x < panel[section].x2:
-                    clockButtonEvent(self, e.detail)
-                    return
-            else:
-                for t in panel[TASKS].tasks.values():
-                    if x > t.x1 and x < t.x2:
-                        taskButtonEvent(self, e.detail, t)
-    
-    #-------------------------------------------
-    def loop(self, dsp, root, win, ewmh, panel):
-    #-------------------------------------------
+    #-------------------------------------
+    def loop(self, dsp, root, win, panel):
+    #-------------------------------------
         """ Event loop - handle events as they occur until we're killed """
-        mapped  = 1
-        rpm     = dsp.intern_atom("_XROOTPMAP_ID")
-        states  = [dsp.intern_atom("WM_STATE"), self._STATE]
-        props   = [self._CLIENT_LIST, self._CURRENT_DESKTOP, self._WORKSPACE]   
+        states = [dsp.intern_atom("WM_STATE"), self._STATE]
+        props  = [self._CLIENT_LIST, self._CURRENT_DESKTOP, self._DESKTOP]   
         
         while 1:
-            if not mapped:                
-                if not TRANSPARENCY:
-                    win.change_attributes(background_pixel=self.getColor(BG_COLOR))
-                else:
-                    ppshade(win.id, SHADE, P_START, P_LOCATION, P_WIDTH, P_HEIGHT)
-                win.map()
-                mapped = 1
-                if ewmh:
-                    self.sendEvent(win, self._STATE, [2,self._HIDDEN])
-                    win.change_property(self._WORKSPACE, Xatom.CARDINAL, 32, [0xffffffffL])
-                                        
             while dsp.pending_events():
                 e = dsp.next_event()
                 if e.type == X.ButtonRelease:
-                    if self.hidden:
-                        self.toggleHidden()
-                        self.updateTasks(dsp, root, win, panel)
-                    else:
-                        self.buttonRelease(panel, e)
+                    self.buttonRelease(root, panel, e)
                 elif e.type == X.DestroyNotify:
                     if e.window.id in panel[TASKS].tasks:
                         del panel[TASKS].tasks[e.window.id]
+                        panel[TASKS].order.remove(e.window.id)
                     elif TRAY and e.window.id in panel[TRAY].tasks:
                         del panel[TRAY].tasks[e.window.id]
                     if not self.hidden:
-                        self.updatePanel(dsp, root, win, self.getWS(root, 1), panel)
+                        self.updatePanel(dsp, root, win, self.getDesktop(root, 1), panel)
                 elif e.type == X.PropertyNotify:
                     if e.atom in props and not self.hidden:
                         self.updateTasks(dsp, root, win, panel)
-                    elif e.atom == rpm and TRANSPARENCY:
-                        self.sendEvent(win, self._STATE, [2, self._HIDDEN])
+                    elif e.atom == self._RPM:
                         win.unmap()
-                        mapped = 0                    
-                    if e.window.id in panel[TASKS].tasks:
+                        self.updateBackground(root, win)
+                        win.map()
+                        win.change_property(self._DESKTOP, Xatom.CARDINAL, 32, [0xffffffffL])            
+                    elif e.window.id in panel[TASKS].tasks:
                         if e.atom in states:
-                            self.setState(panel[TASKS].tasks[e.window.id], panel, 1, dsp, win)
+                            self.setState(panel[TASKS].tasks[e.window.id], panel, 1, win)
                         elif e.atom == Xatom.WM_NAME or e.atom == self._NAME:
                             t = panel[TASKS].tasks[e.window.id]
                             name = self.getName(t.obj)
@@ -569,25 +649,20 @@ class PyPanel(object):
                                 t.name = name
                                 x = t.x1 + P_SPACER
                                 if APPICONS:
-                                    ppicon(win.id, t.obj.id, x,
-                                        (P_HEIGHT-I_HEIGHT)/2, I_WIDTH, I_HEIGHT)
                                     x += I_WIDTH+P_SPACER
-                                win.clear_area(x, 0, t.x2 - x, P_HEIGHT)
-                                dsp.sync()
+                                ppclear(win.id, x, 0, t.x2-x, P_HEIGHT)
                                 ppfont(win.id, t.color, x, P_HEIGHT, t.x2-x-P_SPACER, t.name)
                         elif e.atom == Xatom.WM_HINTS and APPICONS:
                             t = panel[TASKS].tasks[e.window.id]
                             x = t.x1 + P_SPACER
-                            win.clear_area(x, 0, t.x2 - x, P_HEIGHT)
-                            dsp.sync()
-                            ppicon(win.id, t.obj.id, x,
-                                (P_HEIGHT-I_HEIGHT)/2, I_WIDTH, I_HEIGHT)
+                            ppclear(win.id, x, 0, t.x2-x, P_HEIGHT) 
+                            self.getIcon(t, x)
                             x += I_WIDTH+P_SPACER
                             ppfont(win.id, t.color, x, P_HEIGHT, t.x2-x-P_SPACER, t.name)
                 elif e.type == X.ConfigureNotify and TRAY:
                     if e.window.id in panel[TRAY].tasks:
                         task = panel[TRAY].tasks[e.window.id]
-                        task.obj.configure(width=task.w, height=task.h)
+                        task.obj.configure(width=task.w, height=task.h)                                            
                 elif e.type == X.ClientMessage and TRAY:
                     if e.window == self.selowin:
                         data = e.data[1][1] # opcode
@@ -595,48 +670,47 @@ class PyPanel(object):
                         if e.client_type == self._OPCODE and data == 0:
                             # SYSTEM_TRAY_REQUEST_DOCK opcode = 0
                             obj = dsp.create_resource_object("window", task)
-                            obj.reparent(panel[TRAY].window.id, 0, 0)
-                            obj.change_attributes(event_mask=(X.StructureNotifyMask))
+                            obj.reparent(panel[TRAY].window.id, 0, 0)     
+                            obj.change_attributes(event_mask=(X.ExposureMask|X.StructureNotifyMask))
                             panel[TRAY].tasks[task] = Obj(obj=obj, w=TRAY_I_WIDTH, h=TRAY_I_HEIGHT)
+                elif e.type == X.EnterNotify and self.hidden:
+                    if e.window.id == win.id:
+                        self.toggleHidden() 
+                        self.updateTasks(dsp, root, win, panel)              
                 elif e.type == X.FocusIn:
                     prev_focus = self.focus
                     self.focus = e.window.id
-                    for id in (e.window.id, prev_focus):
-                        if id in panel[TASKS].tasks:
-                            self.setState(panel[TASKS].tasks[id], panel, 1, dsp, win)
+                    for wid in (e.window.id, prev_focus):
+                        if wid in panel[TASKS].tasks:
+                             self.setState(panel[TASKS].tasks[wid], panel, 1, win)
                 elif e.type == X.Expose and e.count == 0:
-                    if self.hidden:
-                        ppfont(win.id, self.getColor(LINE_COLOR), 1, P_HEIGHT, 0, self.arrow)
-                    else:
+                    win.change_property(self._DESKTOP, Xatom.CARDINAL, 32, [0xffffffffL])
+                    if not self.hidden:
                         self.sendEvent(win, self._STATE, [1, self._SKIP_TASKBAR])
                         self.sendEvent(win, self._STATE, [1, self._ABOVE])
                         self.updateTasks(dsp, root, win, panel)
-                  
-            rs, ws, es = select.select([dsp.display.socket], [], [], 20)
-            if CLOCK and not rs and not self.hidden:
-                now = time.strftime(CLOCK_FORMAT, time.localtime())
-                if panel[CLOCK].name != now:
-                    panel[CLOCK].name = now
-                    win.clear_area(panel[CLOCK].x1+1, 0, panel[CLOCK].x2-1, P_HEIGHT)
-                    dsp.sync()
-                    ppfont(win.id, panel[CLOCK].color, panel[CLOCK].x1+P_SPACER, P_HEIGHT, 0, now)
-                    panel[CLOCK].x2 = panel[CLOCK].x1 + ppfontsize(now) + P_SPACER
-
-#----------------------------------------------------------------------------                
-
-class Obj(object):
-    """ Multi-purpose empty object class """
-    def __init__(self, **kwargs): 
-        self.__dict__.update(kwargs)
-
+            
+            rs, ws, es = select.select([dsp.display.socket], [], [], CLOCK_DELAY)
+            if not rs and not self.hidden:
+                if AUTOHIDE:
+                    self.toggleHidden()
+                elif CLOCK:
+                    now = time.strftime(CLOCK_FORMAT, time.localtime())
+                    if panel[CLOCK].name != now:
+                        panel[CLOCK].name = now
+                        width = panel[CLOCK].width + P_SPACER*2 - 1
+                        ppclear(win.id, panel[CLOCK].x1+1, 0, width, P_HEIGHT) 
+                        ppfont(win.id, panel[CLOCK].color,
+                            panel[CLOCK].x1+P_SPACER, P_HEIGHT, 0, now)
+            
 #----------------------------------------------------------------------------
 #                                  Main
 #----------------------------------------------------------------------------
 from distutils import sysconfig
-from ppmodule import ppinit, ppshade, ppicon, ppfont, ppfontsize
+from ppmodule import ppinit, ppshade, ppicon, ppfont, ppfontsize, ppclear
 from Xlib import X, display, error, Xatom, Xutil
 import Xlib.protocol.event
-import os, pwd, select, sys, time
+import os, popen2, pwd, select, sys, time
 
 if __name__ == "__main__":
     try:
@@ -655,4 +729,41 @@ if __name__ == "__main__":
         sys.stderr.write("\nFailed to open ~/.pypanelrc -\n\n")
         sys.stderr.write(str(e)+"\n\n")
         sys.exit()
+        
+    if not ICON:
+        ICON = "%s/pypanel/ppicon.png" % sysconfig.get_python_lib()
+    if not os.access(ICON, os.F_OK|os.R_OK):
+        sys.stderr.write("\nFailed to open icon image file -\n\n")
+        sys.stderr.write("%s\n\n" % ICON)
+        sys.stderr.write("Please check the path and/or read permissions ...\n\n")
+        sys.exit()
+        
+    # Kludge Zone - XFWM4 and Openbox have some quirks, check if they're
+    # running.  Also, if Window Maker is running we're not using EWMH.
+    EWMH    = 1
+    XFWM4   = 0
+    OPENBOX = 0
+    
+    for wm in ("wmaker", "openbox", "xfwm"):
+        p = popen2.Popen3("ps aux | grep %s | grep -v grep" % wm, 1)
+        p.wait()
+        out = p.fromchild.read()
+        err = p.childerr.read() 
+            
+        if err:
+            p = popen2.Popen3("ps -ef | grep %s | grep -v grep" % wm, 1)
+            p.wait()
+            out = p.fromchild.read()
+            err = p.childerr.read() 
+        if out:
+            if wm == "wmaker":
+                EWMH = 0
+                break
+            elif wm == "openbox":
+                OPENBOX = 1
+                break
+            elif wm == "xfwm":
+                XFWM4 = 1
+                break
+    del p
     PyPanel(display.Display())
