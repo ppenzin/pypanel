@@ -1,11 +1,10 @@
 -------------------------------------------------------------------------------
- PyPanel v2.0 Copyright (c) 2003-2004 Jon Gelo (ziljian@users.sourceforge.net)
- Distributed under the GNU General Public License v2, see COPYING for details.
+PyPanel v2.2 Copyright (c) 2003-2005 Jon Gelo (ziljian@users.sourceforge.net)
+Distributed under the GNU General Public License v2, see COPYING for details.
 -------------------------------------------------------------------------------
 PyPanel is a lightweight panel/taskbar written in Python and C for X11 window
 managers.  It can be easily customized to match any desktop theme or taste.
-PyPanel works with WindowMaker and EWMH compliant WMs (Kahakai, Openbox, FVWM,
-PekWM, etc). 
+PyPanel works with EWMH compliant WMs. (Kahakai, Openbox, FVWM, PekWM, etc.).
 
 The panel displays currently running tasks/applications and can also be
 configured to display the current desktop name, date/time and a system tray
@@ -36,7 +35,7 @@ formatting and no syntax errors or the panel will not start!
 -------------------------------------------------------------------------------
 1. python setup.py install
 2. pypanel &
-3. If upgrading to 2.0, you'll need to replace/merge your current 
+3. If upgrading to 2.x from 1.3, you will need to replace your current 
    ~/.pypanelrc with the new version:
  
    a. Move your current ~/.pypanelrc to a backup location or backup name
@@ -81,6 +80,16 @@ http://pypanel.sourceforge.net
 -------------------------------------------------------------------------------
                                     History
 -------------------------------------------------------------------------------
+050206 v2.2   - New features/options:
+                Read config from /etc/pypanelrc first if it exists
+                Option to show only minimized/iconified apps (SHOWMINIMIZED)
+                Option to show a border around the panel (SHOWBORDER)
+                Option to set the minimized panel size (HIDDEN_SIZE)
+                Added panelButtonEvent() to handle button events on empty panel
+                Bug fixes:
+                Removed legacy WindowMaker support, it's now EWMH capable
+                Fixed setup.py to gather correct compile/link arguments
+                Added a workaround for failing Imlib2 image loaders
 040926 v2.0   - New features/options:
                 Now using Imlib2 for all image rendering
                 Panel background tinting using BG_COLOR

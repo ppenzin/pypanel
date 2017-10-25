@@ -1,6 +1,6 @@
 /*
-PyPanel v2.0 - Lightweight panel/taskbar for X11 window managers
-Copyright (c) 2003-2004 Jon Gelo (ziljian@users.sourceforge.net)
+PyPanel v2.2 - Lightweight panel/taskbar for X11 window managers
+Copyright (c) 2003-2005 Jon Gelo (ziljian@users.sourceforge.net)
 
 This file is part of PyPanel.
 PyPanel is free software; you can redistribute it and/or
@@ -81,7 +81,7 @@ static PyObject * _ppfont(PyObject *self, PyObject *args) {
         return NULL;
     
     xcol.pixel = pixel;
-    
+        
 #ifdef HAVE_XFT
     if (limit) {
         while (1) {
@@ -147,13 +147,14 @@ static PyObject * _ppicon(PyObject *self, PyObject *args) {
     char *data; 
     int x, y, w, h, i_w, i_h, size;
         
+    
     if (!PyArg_ParseTuple(args, "llliiiiiis#", &panel, &win_icon, &win_mask,
                           &x, &y, &w, &h, &i_w, &i_h, &data, &size))
         return NULL;
     
-    if (size > 0)
+    if (size > 0) 
         /* _net_wm_icon */
-        icon = imlib_create_image_using_data(w, h, (unsigned int*)data);
+        icon = imlib_create_image_using_data(w, h, (DATA32*)data);
     else if (win_icon) {
         /* wmhints icon */
         scm = XAllocStandardColormap();
@@ -166,11 +167,15 @@ static PyObject * _ppicon(PyObject *self, PyObject *args) {
         /* default icon */
         icon = dflt_icon;
     
+    if (!icon) {
+        printf("Failed to create icon in ppicon!\n");
+        return Py_BuildValue("i", 0);
+    }
+    
     imlib_context_set_image(icon);
     imlib_image_set_has_alpha(1);
     imlib_context_set_drawable(panel);
     imlib_context_set_blend(1);
-    imlib_context_set_dither(1);    
     imlib_render_image_on_drawable_at_size(x, y, i_w, i_h);
     imlib_free_image();
     return Py_BuildValue("i", 1);
@@ -183,8 +188,8 @@ static PyObject * _ppshade(PyObject *self, PyObject *args) {
     Pixmap bgpm, mask, rpm;
     Window panel;
     char filter[100];
-    int x, y, w, h, r, g, b, a;    
-    
+    int x, y, w, h, r, g, b, a;
+ 
 
     if (!PyArg_ParseTuple(args, "lliiiiiiii", &panel, &rpm, &x, &y, &w, &h,
                           &r, &g, &b, &a))
@@ -201,10 +206,17 @@ static PyObject * _ppshade(PyObject *self, PyObject *args) {
 
     imlib_context_set_drawable(rpm);
     bg = imlib_create_image_from_drawable(0, x, y, w, h, 1);
+    
+    if (!bg) {
+        printf("Failed to create background image in ppshade!\n");
+        return Py_BuildValue("i", 0);
+    }
+    
     imlib_context_set_image(bg);
-    imlib_context_set_dither(1);
+    
     sprintf(filter,"tint(x=0,y=0,w=%d,h=%d,red=%d,green=%d,blue=%d,alpha=%d);",
             w,h,r,g,b,a);
+    
     imlib_apply_filter(filter);
     imlib_render_pixmaps_for_whole_image(&bgpm, &mask);
     XSetWindowBackgroundPixmap(dsp, panel, bgpm);
@@ -219,6 +231,7 @@ static PyObject * _ppinit(PyObject *self, PyObject *args) {
     Window panel;
     XGCValues gcv;
     char *font, *icon;
+    Imlib_Load_Error rc;
     
     
     XSetErrorHandler(pperror);
@@ -229,11 +242,14 @@ static PyObject * _ppinit(PyObject *self, PyObject *args) {
     if (!PyArg_ParseTuple(args, "lss", &panel, &font, &icon))
         return NULL;
     
-    dflt_icon = imlib_load_image(icon);
     imlib_context_set_display(dsp);
     imlib_context_set_visual(DefaultVisual(dsp, scr));
-    imlib_context_set_colormap(DefaultColormap(dsp, scr)); 
+    imlib_context_set_colormap(DefaultColormap(dsp, scr));
+    imlib_context_set_dither(1);
     
+    dflt_icon = imlib_load_image_with_error_return(icon, &rc); 
+    if (!dflt_icon)
+        printf("Error #%i loading '%s'\n", rc, icon);
     
 #ifdef HAVE_XFT
     if (font[0] == '-')
@@ -267,9 +283,8 @@ static PyMethodDef PPMethods[] = {
     {NULL, NULL, 0, NULL}
 };
 
-/*------------------*/
-/*  PyMODINIT_FUNC  */
-void initppmodule() {
-/*------------------*/
-    (void)Py_InitModule("ppmodule", PPMethods);
+/*----------------------*/
+void initppmodule(void) {
+/*----------------------*/    
+    Py_InitModule("ppmodule", PPMethods);
 }

@@ -1,11 +1,12 @@
 #------------------------------------------------------------------------------
 #
-#                         PyPanel v2.0 Configuration
+#                         PyPanel v2.2 Configuration
 #
 # This configuration file is a Python script that will be executed when
 # PyPanel is started.  In order for PyPanel to start properly, make sure that
 # this file contains proper Python formatting and no syntax errors.
 #------------------------------------------------------------------------------
+VERSION         = 2.2           # Config file version
 
 #------------------------------------------------------------------------------
 # Colors: Format is hex triplet - 0xrrggbb
@@ -54,6 +55,11 @@ CLOCK_DELAY     = 20
 HIDE_LIST       = []            
                    
 #------------------------------------------------------------------------------
+# Hidden Panel Size: Size of the panel when it's hidden/minimized
+#------------------------------------------------------------------------------
+HIDDEN_SIZE     = 2
+
+#------------------------------------------------------------------------------
 # Panel Text Font: This option takes either a traditional or Xft font string 
 # Ex: "-schumacher-clean-medium-r-normal-*-12-*-*-*-*-*-*-*"
 #     "aquafont-8" 
@@ -62,11 +68,18 @@ FONT            = "bitstream vera sans-8"
 
 #------------------------------------------------------------------------------
 # Show All Applications: Show apps from all desktops or just the current
-# 0: Disabled - only applications on the current desktop will be displayed
-# 1: Enabled  - Selected apps are moved to the current desktop (EWMH only)
+# 0: Disabled - Only applications on the current desktop will be displayed
+# 1: Enabled  - Selected apps are moved to the current desktop
 # 2: Enabled  - Current desktop is changed to the selected apps desktop
 #------------------------------------------------------------------------------
 SHOWALL         = 0             # 0, 1 or 2 - see descriptions above
+
+#------------------------------------------------------------------------------
+# Show Minimized/Iconified Applications: Show only minimized apps or all apps
+# 0: Disabled - Show all applications on the panel
+# 1: Enabled  - Show only minimized apps on the panel
+#------------------------------------------------------------------------------
+SHOWMINIMIZED   = 0
 
 #------------------------------------------------------------------------------
 # Default Application Icon: Used for applications with no icon
@@ -87,6 +100,7 @@ SHADE           = 50
 APPICONS        = 1             # Show application icons
 AUTOHIDE        = 0             # Autohide uses the CLOCK_DELAY timer above
 SHOWLINES       = 1             # Show object seperation lines
+SHOWBORDER      = 0             # Show a border around the panel
 
 #------------------------------------------------------------------------------
 # Desktop Names: Configure the names of your desktops
@@ -109,9 +123,6 @@ DESKTOP         = 1             # Desktop name section
 TASKS           = 2             # Task names section (cannot be disabled!) 
 TRAY            = 3             # System tray section
 CLOCK           = 4             # Clock section
-
-
-
 
 #------------------------------------------------------------------------------
 #                       Button Event Function Definitions
@@ -178,6 +189,22 @@ def clockButtonEvent(pp, button):
         pp.showDesktop()
     elif button == 5:
         pp.showDesktop()
+        
+#--------------------------------
+def panelButtonEvent(pp, button):
+#--------------------------------
+    """ Button event handler for the panel with no active tasks """
+    
+    if button == 1:
+        pass
+    elif button == 2:
+        pass
+    elif button == 3:
+        pass
+    elif button == 4:
+        pass
+    elif button == 5:
+        pass
         
 #-------------------------------------
 def taskButtonEvent(pp, button, task):
