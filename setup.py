@@ -14,31 +14,27 @@ ldirs   = []
 # Add any additional compile options here -
 cargs   = ["-Wall"]
 
-# Full path to libImlib2 without the extension
-imlib2  = "/usr/lib/libImlib2"
+# Full path to libImlib2 shared library
+imlib2  = "/usr/lib/libImlib2.so.1"
 
 #------------------------------------------------------------------------------
 # The rest of this script should not need to be modified! 
 #------------------------------------------------------------------------------
-libs        = [] # libraries (listed without -l)
-largs       = [] # extra link arguments
-defs        = [] # define macros
+libs  = [] # libraries (listed without -l)
+largs = [] # extra link arguments
+defs  = [] # define macros
+files = ["COPYING", "README", "ppicon.png", "pypanelrc"]
 install_dir = sysconfig.get_python_lib() + "/pypanel"
-files       = ["COPYING", "README", "ppicon.png", "pypanelrc"]
-imlib2_fix  = 0
-imlib2_str  = """
-    import dl
-    imlib2 = dl.open("%s%s", dl.RTLD_NOW|dl.RTLD_GLOBAL)
-    imlib2.close()
-    del imlib2""" 
 
+# Check for Python Xlib
 try:
     from Xlib import X, display, Xatom, Xutil
 except:
     print "\nPyPanel requires the Python X library -"
     print "http://sourceforge.net/projects/python-xlib/"
     sys.exit()
-
+   
+# Parse the build options
 for config in configs:
     package = os.path.split(config)[1]
     
@@ -77,12 +73,8 @@ for config in configs:
             # undefined symbols, dlopen it first with the RTLD_GLOBAL flag.
             version = os.popen("%s --version" % config).read().strip()
             if float(version[:3]) >= 1.2:
-                import imp
-                for ext, mode, typ in imp.get_suffixes():
-                    if typ == imp.C_EXTENSION:
-                        imlib2_fix = 1
-                        imlib2_str = imlib2_str % (imlib2, os.path.splitext(ext)[1]) 
-                        break
+                defs.append(("IMLIB2_FIX", 1))
+            
     else:
         if package == "imlib2-config":
             print "\nPyPanel requires the Imlib2 library -"
@@ -93,12 +85,19 @@ for config in configs:
 if len(sys.argv) > 1 and sys.argv[1] != "sdist":
     for line in fileinput.input(["pypanel"], inplace=1):
         if fileinput.isfirstline():
-            print "#!%s -O" % sys.executable
-        elif imlib2_fix and line.strip() == "#<Imlib2 workaround>":
-            print imlib2_str
+            print "#!%s -OO" % sys.executable
         else:
-            print line,        
-
+            print line,  
+            
+    if ("IMLIB2_FIX", 1) in defs:
+        for line in fileinput.input(["ppmodule.c"], inplace=1):
+            if "handle = dlopen" in line:
+                print '    handle = dlopen("%s", RTLD_NOW|RTLD_GLOBAL);' % imlib2
+            else:
+                print line,   
+                
+                   
+# Distutils config
 module = Extension("ppmodule",
                    sources            = ["ppmodule.c"],
                    include_dirs       = idirs,
@@ -112,7 +111,7 @@ module = Extension("ppmodule",
 setup(name             = "PyPanel",
       author           = "Jon Gelo",
       author_email     = "ziljian@users.sourceforge.net",
-      version          = "2.2",
+      version          = "2.3",
       license          = "GPL",
       platforms        = "POSIX",
       description      = "Lightweight panel/taskbar for X11 Window Managers",

@@ -1,14 +1,14 @@
 -------------------------------------------------------------------------------
-PyPanel v2.2 Copyright (c) 2003-2005 Jon Gelo (ziljian@users.sourceforge.net)
+PyPanel v2.3 Copyright (c) 2003-2005 Jon Gelo (ziljian@users.sourceforge.net)
 Distributed under the GNU General Public License v2, see COPYING for details.
 -------------------------------------------------------------------------------
 PyPanel is a lightweight panel/taskbar written in Python and C for X11 window
 managers.  It can be easily customized to match any desktop theme or taste.
-PyPanel works with EWMH compliant WMs. (Kahakai, Openbox, FVWM, PekWM, etc.).
+PyPanel works with EWMH compliant WMs.
 
 The panel displays currently running tasks/applications and can also be
-configured to display the current desktop name, date/time and a system tray
-(notification area).
+configured to display the current desktop name, date/time, a system tray
+(notification area) and application launcher.
 
 When the panel is minimized, either manually or by autohide, it can be restored
 by moving the mouse over the top or bottom of the screen where the panel was
@@ -17,10 +17,10 @@ displayed prior to minimization.
 All image rendering (icons and background transparency/tinting) is handled by
 Imlib2.
 
-The handling of button events on the panel objects is handled by the 
-~/.pypanelrc configuration file.  The file is a python script which gets 
-imported/executed when PyPanel is invoked, ensure it contains proper Python
-formatting and no syntax errors or the panel will not start!
+Mouse button events on panel objects are handled by the ~/.pypanelrc
+configuration file.  The file is a python script which gets imported/executed
+when PyPanel is invoked.  Ensure that it contains proper Python formatting and
+no syntax errors or the panel will not start!
     
 -------------------------------------------------------------------------------
                         Requirements (Minimum versions)
@@ -58,7 +58,7 @@ PyPanel installs the following files -
                                  Configuration
 -------------------------------------------------------------------------------
 1. Configuration is handled via the ~/.pypanelrc python script, it's
-   'executed' when PyPanel is started.
+   executed when PyPanel is started.
 2. If the level of customization from the config script isn't enough, hack
    the PyPanel script itself.
 
@@ -80,6 +80,24 @@ http://pypanel.sourceforge.net
 -------------------------------------------------------------------------------
                                     History
 -------------------------------------------------------------------------------
+050510   New features:
+v2.3        Improved support for Fluxbox, Blackbox, XFWM4 and Enlightenment
+            Ability to customize individual app icons
+            Added an Application Launcher
+            Added a check to enforce only one running instance of the panel
+            Option for the panel to stay above or below other apps (ABOVE)
+         Bug fixes:
+            Clock updates 
+            Several system tray and performance improvements
+         New Config Options:
+            ABOVE         : Panel is above or below other apps
+            APPL_I_WIDTH  : Application launcher icon width
+            APPL_I_HEIGHT : Application launcher icon height 
+            ICON_LIST     : List of custom icons for specific apps
+            LAUNCHER      : To enable and position the application launcher
+            LAUNCH_LIST   : List of executables and their icons
+            TRAY_I_WIDTH  : Can now be set to 0 to allow app specific size
+            
 050206 v2.2   - New features/options:
                 Read config from /etc/pypanelrc first if it exists
                 Option to show only minimized/iconified apps (SHOWMINIMIZED)

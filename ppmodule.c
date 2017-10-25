@@ -1,5 +1,5 @@
 /*
-PyPanel v2.2 - Lightweight panel/taskbar for X11 window managers
+PyPanel v2.3 - Lightweight panel/taskbar for X11 window managers
 Copyright (c) 2003-2005 Jon Gelo (ziljian@users.sourceforge.net)
 
 This file is part of PyPanel.
@@ -23,9 +23,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <X11/Xutil.h>
 #include <Imlib2.h>
 
+#ifdef IMLIB2_FIX
+#include <dlfcn.h>
+#endif
+
 typedef unsigned long CARD32;
 
-Imlib_Image dflt_icon;
 Display *dsp;
 GC gc;
 int scr;
@@ -73,10 +76,10 @@ static PyObject * _ppfont(PyObject *self, PyObject *args) {
     Window win;
     XColor xcol;
     char *text;
-    int len, font_x, font_y, p_height, limit;
+    int len, font_y, p_height;
+    float font_x, limit;
     
-    
-    if (!PyArg_ParseTuple(args, "lliiis#", &win, &pixel, &font_x, &p_height,
+    if (!PyArg_ParseTuple(args, "llfifs#", &win, &pixel, &font_x, &p_height,
                           &limit, &text, &len))
         return NULL;
     
@@ -130,7 +133,7 @@ static PyObject * _ppfontsize(PyObject *self, PyObject *args) {
         return NULL;
     
 #ifdef HAVE_XFT
-    XftTextExtentsUtf8(dsp, xf, text, len, &ginfo);
+    XftTextExtentsUtf8(dsp, xf, text, len, &ginfo); 
     return Py_BuildValue("i", ginfo.width);
 #else
     return Py_BuildValue("i", (int)XTextWidth(xf, text, len));
@@ -144,15 +147,18 @@ static PyObject * _ppicon(PyObject *self, PyObject *args) {
     Pixmap win_icon, win_mask;
     Window panel;
     XStandardColormap *scm;
-    char *data; 
-    int x, y, w, h, i_w, i_h, size;
-        
+    char *data, *path; 
+    int y, w, h, i_w, i_h, s1, s2;
+    float x;
     
-    if (!PyArg_ParseTuple(args, "llliiiiiis#", &panel, &win_icon, &win_mask,
-                          &x, &y, &w, &h, &i_w, &i_h, &data, &size))
+    if (!PyArg_ParseTuple(args, "lllfiiiiis#s#", &panel, &win_icon, &win_mask,
+                          &x, &y, &w, &h, &i_w, &i_h, &data, &s1, &path, &s2))
         return NULL;
     
-    if (size > 0) 
+    if (s2 > 0)
+        /* custom app icon */
+        icon = imlib_load_image(path);
+    else if (s1 > 0) 
         /* _net_wm_icon */
         icon = imlib_create_image_using_data(w, h, (DATA32*)data);
     else if (win_icon) {
@@ -164,13 +170,11 @@ static PyObject * _ppicon(PyObject *self, PyObject *args) {
         XFree(scm);
     }
     else
-        /* default icon */
-        icon = dflt_icon;
+        /* no icon defined */
+        icon = NULL;
     
-    if (!icon) {
-        printf("Failed to create icon in ppicon!\n");
+    if (!icon)
         return Py_BuildValue("i", 0);
-    }
     
     imlib_context_set_image(icon);
     imlib_image_set_has_alpha(1);
@@ -203,20 +207,18 @@ static PyObject * _ppshade(PyObject *self, PyObject *args) {
     if (b < 0)   b = 0;
     if (a > 255) a = 255;
     if (a < 0)   a = 0;
-
+    
     imlib_context_set_drawable(rpm);
     bg = imlib_create_image_from_drawable(0, x, y, w, h, 1);
-    
+        
     if (!bg) {
         printf("Failed to create background image in ppshade!\n");
         return Py_BuildValue("i", 0);
     }
     
-    imlib_context_set_image(bg);
-    
+    imlib_context_set_image(bg);    
     sprintf(filter,"tint(x=0,y=0,w=%d,h=%d,red=%d,green=%d,blue=%d,alpha=%d);",
             w,h,r,g,b,a);
-    
     imlib_apply_filter(filter);
     imlib_render_pixmaps_for_whole_image(&bgpm, &mask);
     XSetWindowBackgroundPixmap(dsp, panel, bgpm);
@@ -228,10 +230,12 @@ static PyObject * _ppshade(PyObject *self, PyObject *args) {
 /*--------------------------------------------------------*/
 static PyObject * _ppinit(PyObject *self, PyObject *args) { 
 /*--------------------------------------------------------*/
+#ifdef IMLIB2_FIX
+    void *handle;
+#endif
     Window panel;
     XGCValues gcv;
-    char *font, *icon;
-    Imlib_Load_Error rc;
+    char *font;
     
     
     XSetErrorHandler(pperror);
@@ -239,7 +243,7 @@ static PyObject * _ppinit(PyObject *self, PyObject *args) {
     dsp = XOpenDisplay(NULL);
     scr = DefaultScreen(dsp);
     
-    if (!PyArg_ParseTuple(args, "lss", &panel, &font, &icon))
+    if (!PyArg_ParseTuple(args, "ls", &panel, &font))
         return NULL;
     
     imlib_context_set_display(dsp);
@@ -247,9 +251,22 @@ static PyObject * _ppinit(PyObject *self, PyObject *args) {
     imlib_context_set_colormap(DefaultColormap(dsp, scr));
     imlib_context_set_dither(1);
     
-    dflt_icon = imlib_load_image_with_error_return(icon, &rc); 
-    if (!dflt_icon)
-        printf("Error #%i loading '%s'\n", rc, icon);
+#ifdef IMLIB2_FIX
+    /* Kludge to get around a problem where dlopen fails to open several
+       Imlib2 (versions 1.2 and greater) image loaders, namely png and jpeg,
+       because of undefined symbols.  This problem is somehow related to
+       calling the Imlib2 code from this Python extension module.  As a
+       workaround, I go ahead and open the shared libs here with the RTLD_LAZY
+       flag, avoiding the undefined symbols.  This stops the Imlib2 code from
+       attempting to open them later with the RTLD_NOW flag which fails.  If
+       you're reading this and know of a proper solution, please let me know ..
+    */
+    handle = dlopen("/usr/lib/libImlib2.so.1", RTLD_NOW|RTLD_GLOBAL);
+
+    if (!handle) {
+        printf("Imlib2 dlopen failed: %s\n", dlerror());
+    }
+#endif
     
 #ifdef HAVE_XFT
     if (font[0] == '-')
