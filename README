@@ -1,0 +1,115 @@
+-----------------------------------------------------------------------------
+PyPanel v1.3 Copyright (c) 2003-2004 Jon Gelo (ziljian@users.sourceforge.net)
+Distributed under the GNU General Public License v2, see COPYING for details.
+-----------------------------------------------------------------------------
+PyPanel is a lightweight panel/taskbar written in Python and C for X11 window
+managers. It can be easily customized to match any desktop theme or taste.
+PyPanel works with WindowMaker and EWMH compliant WMs (Kahakai, Openbox, FVWM,
+PekWM, etc). 
+
+The panel displays tasks running on the current workspace (desktop) and can
+also be configured to display the current workspace name, date/time and
+a system tray (notification area).
+
+The handling of button events on the panel objects is handled by the 
+~/.pypanelrc configuration file.  The file is a python script which gets 
+imported when pypanel is invoked, ensure it contains no syntax errors or
+the panel will not start!
+    
+-----------------------------------------------------------------------------
+                       Requirements (Minimum versions)
+-----------------------------------------------------------------------------
+1. Python v2.2             http://www.python.org
+2. Python X Library v0.12  http://python-xlib.sourceforge.net
+3. libXpm v3.4 (optional)  http://koala.ilog.fr/lehors/xpm.html
+4. libXft v1.0 (optional)  http://fontconfig.org
+
+-----------------------------------------------------------------------------
+                     Installation (Upgrading) & Starting
+-----------------------------------------------------------------------------
+1. python setup.py install
+2. pypanel &
+3. If upgrading to 1.3, you'll need to replace/merge your current 
+   ~/.pypanelrc with the new version:
+ 
+   a. Move your current ~/.pypanelrc to a backup location or name
+   b. Start pypanel so a new ~/.pypanelrc is created
+   c. Kill the panel process
+   d. Merge any changes you wish to keep from your backup config to the
+      new version
+
+-----------------------------------------------------------------------------
+                               Uninstallation
+-----------------------------------------------------------------------------
+PyPanel installs the following files -
+
+1. /usr/bin/pypanel (may be in /usr/local/bin or other depending on system)
+2. <path to your Python library>/site-packages/ppmodule.so (or .sl)
+3. <path to your Python library>/site-packages/pypanel/
+4. ~/.pypanelrc
+
+-----------------------------------------------------------------------------
+                                Configuration
+-----------------------------------------------------------------------------
+1. Configuration is handled via the ~/.pypanelrc python script, it's
+   'executed' when pypanel is started.
+2. If the level of customization from the config script isn't enough, hack
+   the pypanel script itself.
+
+-----------------------------------------------------------------------------
+                                Contributions
+-----------------------------------------------------------------------------
+1. The default app icon included in this distribution is from the Amaranth
+   icon set by Michael Doches.  Available from http://www.kde-look.org
+2. The shading routine came largely from Sasha Vasko's AfterStep term.
+   Available from http://aterm.sourceforge.net
+   
+-----------------------------------------------------------------------------   
+                                   Contact
+-----------------------------------------------------------------------------
+Jon Gelo (ziljian@users.sourceforge.net)
+http://pypanel.sourceforge.net
+
+-----------------------------------------------------------------------------
+                                   History
+-----------------------------------------------------------------------------
+040719 v1.3   - Added a System Tray
+                More flexibility for the panel layout
+                Tweaked the config
+                Fixed a bug with font handling
+040328 v1.2   - Ability to change the color of focused tasks (FOCUSED_COLOR)
+                Added taskFocus() method for button events which allows
+                tasks which aren't focused to become focused else it toggles
+                the tasks minimization.
+                Decreased the amount of time between clock updates when idle.
+                Bug fixes:
+                Crash with certain panel size/dimension settings
+                Unnecessary task refreshing caused flashing/blinking                
+040218 v1.1   - Bug fixes:
+                Broken hide list
+                Exception during get_wm_state
+040131 v1.0   - Xft support
+                Ability to minimize the panel (toggleHidden)
+                Ability to hide certain apps (HIDE_LIST)
+                Removed the SHOWALL option
+                Numerous bug fixes and optimizations
+031109 v0.9   - Clock support
+                Customizable button event handling 
+                Ability to place the workspace name/clock on right/left
+                Vertical line seperators can be turned off
+                Bug fixes:
+                Background change or restart sometimes killed panel
+                Sending task to another desktop didn't update correctly
+031012 v0.8   - Create ~/.pypanelrc if it doesn't exist
+                Raise & focus a task via middle mouse click
+                Workspace switching via clicks/scroll on the workspace name
+031009 v0.7.1 - Bug fixes:
+                Strut and visible name hints
+                Icons with no/invalid masks
+                Tasks with no name                
+031004 v0.7   - OpenBox3 support
+                Window shading/unshading via right mouse click
+                Config option for panel width, x position and top/bottom
+                Config option for displaying all tasks or just minimized
+030927 v0.6   - Added EWMH support (Kahakai and PekWM) 
+030921 v0.5   - Initial Beta release

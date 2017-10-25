@@ -1,0 +1,126 @@
+#----------------------------------------------------------------------------
+#                         PyPanel v1.3 Configuration
+#----------------------------------------------------------------------------
+
+BG_COLOR        = "0x122744"    # Panel background color (hex triplet)
+TASK_COLOR      = "0x7d7d7d"    # Normal task name color 
+FOCUSED_COLOR   = "0xffffff"    # Focused task name color
+SHADED_COLOR    = "0x9d9d9d"    # Shaded task name color 
+MINIMIZED_COLOR = "0x606060"    # Minimized task name color
+WS_COLOR        = "0xffffff"    # Workspace name color 
+CLOCK_COLOR     = "0xffffff"    # Clock text color
+LINE_COLOR      = "0x606060"    # Vertical task seperator line color 
+APPICONS        = 1             # Show application icons (1 yes / 0 no)
+SHOWLINES       = 1             # Show object seperation lines (1 yes / 0 no)
+TRANSPARENCY    = 1             # Use transparent background (1 yes / 0 no)
+SHADE           = 70            # Transparency shading (0 [black] - 100 [clear])
+P_LOCATION      = 1             # Top/Bottom placement (0 top / 1 bottom)
+P_START         = 0             # Starting X coordinate of the panel (pixel)
+P_SPACER        = 6             # Spacing between panel objects (pixels)
+P_HEIGHT        = 24            # Panel height (pixels)
+P_WIDTH         = 0             # Panel width (pixels), 0 = full screen width
+I_HEIGHT        = 16            # Task icon height (pixels)
+I_WIDTH         = 16            # Task icon Width (pixels)
+TRAY_I_WIDTH    = 24            # System tray icon width  (usually 16 or 24)
+TRAY_I_HEIGHT   = 24            # System tray icon height (usually 16 or 24)
+CLOCK_FORMAT    = "%Y-%m-%d %H:%M" # 'man strftime' for formatting options
+HIDE_LIST       = []            # Apps in this list won't be displayed on the
+                                # panel.  Add apps by their WM_CLASS name
+                                # found using 'xprop'.
+                                # ex. ["xmms", "xine", "gDesklets"]
+
+# Panel Font
+#FONT = "-schumacher-clean-medium-r-normal-*-12-*-*-*-*-*-*-*"
+FONT = "bitstream vera sans-8"
+
+
+# Panel Layout -
+#
+#   ----------------------------
+#   [  1  ][  2  ][  3  ][  4  ]
+#   ----------------------------
+#
+# The panel layout is split into 4 sections numbered 1, 2, 3 or 4 as shown
+# in the diagram above.  Each of the following objects can be enabled by
+# assigning it a section number or disabled by assigning it 0:
+# workspace name, task names, clock and system tray.
+
+WORKSPACE = 1   # Workspace name section
+TASKS     = 2   # Task names section (cannot be disabled!) 
+TRAY      = 3   # System tray section
+CLOCK     = 4   # Clock section
+
+#----------------------------------------------------------------------------
+#                    Button Event Function Definitions
+#----------------------------------------------------------------------------
+# Left click   - button 1 
+# Middle click - button 2
+# Right click  - button 3
+# Wheel up     - button 4
+# Wheel down   - button 5 
+#
+# changeWorkspace(num) - increase/decrease the current workspace by num
+# toggleShade(task)    - shade/unshade a task
+# toggleHidden(side)   - minimize the panel to the "right" or "left"
+# toggleMinimize(task, traise=1) - iconify/deiconify a task and raise it
+# taskRaise(task, focus=0) - raise a task and optionally give it input focus
+# taskLower(task, focus=0) - lower a task and optionally give it input focus
+# taskFocus(task)          - focus a task else toggle its minimization
+#----------------------------------------------------------------------------
+
+#-------------------------------------
+def workSpaceButtonEvent(pp, button):
+#-------------------------------------
+    """ Button event handler for the panel's workspace object """
+        
+    if button == 1:
+        pp.changeWorkspace(-1)
+    elif button == 2:
+        pp.changeWorkspace(2)
+    elif button == 3:
+        pp.changeWorkspace(1)
+    elif button == 4:
+        pp.changeWorkspace(1)
+    elif button == 5:
+        pp.changeWorkspace(-1)
+        
+#--------------------------------
+def clockButtonEvent(pp, button):
+#--------------------------------
+    """ Button event handler for the panel's clock object """
+    
+    if button == 1:
+        os.system("xclock &")
+    elif button == 2:
+        pass
+    elif button == 3:
+        pp.toggleHidden("right")  
+    elif button == 4:
+        pass
+    elif button == 5:
+        pass
+        
+#-------------------------------------
+def taskButtonEvent(pp, button, task):
+#-------------------------------------
+    """ Button event handler for the panel's tasks """
+    
+    if button == 1:
+        #pp.toggleMinimize(task)
+        pp.taskFocus(task)
+    elif button == 2:
+        task.obj.destroy() # destroy task
+    elif button == 3:
+        # Example - XMMS doesn't shade, so attempting to shade it
+        #           here will minimize it instead.  task.tclass is the 
+        #           tasks class name (WM_CLASS).
+        if "xmms" in task.tclass:
+            pp.toggleMinimize(task)
+        else:
+            pp.toggleShade(task)
+    elif button == 4:
+        pp.taskRaise(task, focus=1)
+    elif button == 5:
+        pp.taskLower(task, focus=0)
+        
+    
